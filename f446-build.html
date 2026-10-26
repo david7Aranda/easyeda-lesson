@@ -1,0 +1,1149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build the F446 Board</title>
+<meta name="description" content="An event deck that starts with EasyEDA Standard basics and walks through wiring an STM32F446RET6 board pin by pin.">
+<style>
+@font-face{font-family:"Barlow";src:url("fonts/Barlow-Regular.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Barlow";src:url("fonts/Barlow-Medium.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Barlow";src:url("fonts/Barlow-SemiBold.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Barlow Condensed";src:url("fonts/BarlowCondensed-Medium.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Barlow Condensed";src:url("fonts/BarlowCondensed-SemiBold.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Barlow Semi Condensed";src:url("fonts/BarlowSemiCondensed-SemiBold.woff2") format("woff2");font-weight:600;font-display:swap}
+
+:root{
+  --paper:#EDF0F2; --paper-hi:#F8FAFB; --dots:#C3CDD5;
+  --ink:#17212B; --ink-2:#44525F; --ink-3:#7D8A96; --rule:#8C98A3; --line:#D3DAE0;
+  --net:#1D5DBF; --net-tint:#DCE6F4; --net-ink:#123D7E;
+  --a:#1D5DBF; --a-tint:#DCE6F4; --a-ink:#123D7E;
+  --b:#8B3FB5; --b-tint:#EEE2F5; --b-ink:#5B2180;
+  --pwr:#C62828; --pwr-tint:#FBE3E1;
+  --sym:#A0413A;
+  --board:#111920; --board-2:#1A252E; --board-rule:#33424F; --board-ink:#E4EAEF; --board-ink-2:#97A5B2;
+  --cu-top:#E5483B; --silk:#F2C94C; --edge:#DE57DE;
+  --ok:#2F9E5C; --ok-tint:#DDF1E5; --err:#D93B2F; --err-tint:#F8DEDB; --hl:#F4B63F;
+  --f-body:"Barlow","Inter","Segoe UI",system-ui,sans-serif;
+  --f-cond:"Barlow Condensed","Roboto Condensed","Arial Narrow",sans-serif;
+  --f-key:"Barlow Semi Condensed","Barlow","Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#2B343C}
+body{font-family:var(--f-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+#viewport{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#deck{position:relative;width:1600px;height:900px;flex:none;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--paper);color:var(--ink);overflow:hidden;visibility:hidden;opacity:0;transition:opacity .35s ease,visibility 0s linear .35s}
+.slide.active{visibility:visible;opacity:1;transition:opacity .35s ease,visibility 0s}
+.slide.dark{background:var(--board);color:var(--board-ink)}
+.instant,.instant *{transition:none!important}
+
+.frame{position:absolute;left:0;top:0;width:1600px;height:900px;pointer-events:none}
+.frame rect{fill:none;stroke:var(--rule);stroke-width:1}
+.frame .outer{stroke-width:1.6}
+.frame line{stroke:var(--rule);stroke-width:1}
+.frame text{fill:var(--ink-3);font:600 12px var(--f-key);text-anchor:middle;dominant-baseline:central}
+.dark .frame rect,.dark .frame line{stroke:var(--board-rule)}
+.dark .frame text{fill:var(--board-ink-2)}
+.tblock{position:absolute;right:44px;bottom:44px;width:476px;display:grid;grid-template-columns:1fr 96px 82px;border-top:1.5px solid var(--rule);border-left:1.5px solid var(--rule);background:var(--paper);z-index:3}
+.tblock>div{padding:5px 10px 6px;border-left:1px solid var(--rule);display:flex;flex-direction:column;min-width:0}
+.tblock .tb-course{grid-column:1/-1;border-left:0;border-bottom:1px solid var(--rule);flex-direction:row;justify-content:space-between;align-items:baseline;font:600 15px var(--f-key);color:var(--ink-2)}
+.tblock .tb-title{border-left:0}
+.tblock span{font:500 11px/1.2 var(--f-body);color:var(--ink-3)}
+.tblock b{font:600 17px/1.2 var(--f-key);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dark .tblock{background:var(--board);border-color:var(--board-rule)}
+.dark .tblock>div{border-color:var(--board-rule)}
+.dark .tblock .tb-course,.dark .tblock span{color:var(--board-ink-2)}
+.dark .tblock b{color:var(--board-ink)}
+
+.content{position:absolute;left:96px;top:92px;width:640px;z-index:2}
+.content.wide{width:1400px}
+h1{font:600 96px/.95 var(--f-cond);letter-spacing:-.01em;margin:0}
+h2{font:600 54px/1.02 var(--f-cond);margin:0 0 24px;letter-spacing:-.004em;display:flex;align-items:center;gap:16px}
+h2 .num{flex:none;width:58px;height:58px;border-radius:50%;border:3px solid var(--net);color:var(--net);display:grid;place-items:center;font:600 31px/1 var(--f-cond);background:var(--paper-hi)}
+.dark h2 .num{border-color:var(--cu-top);color:#FF7A6E;background:var(--board-2);border-radius:8px}
+p.lead{font:400 28px/1.34 var(--f-body);color:var(--ink-2);margin:0}
+.dark p.lead{color:var(--board-ink-2)}
+p.hint{font:500 20px/1.4 var(--f-body);color:var(--ink-3);margin:40px 0 0;max-width:30em}
+ul.points{list-style:none;margin:0;padding:0}
+ul.points li{font:400 23px/1.36 var(--f-body);margin:0 0 13px;padding-left:28px;position:relative}
+ul.points li::before{content:"";position:absolute;left:3px;top:.56em;width:10px;height:10px;border-radius:50%;background:var(--net)}
+.dark ul.points li::before{background:var(--cu-top);border-radius:2px}
+ul.points li.aside{font-size:20px;color:var(--ink-2)}
+ul.points li.aside::before{background:transparent;border:2px solid var(--ink-3)}
+.dark ul.points li.aside{color:var(--board-ink-2)}
+kbd{display:inline-block;font:600 .86em/1.15 var(--f-key);min-width:1.75em;text-align:center;padding:2px 8px 3px;border:1.5px solid #A9B5C0;border-bottom-width:4px;border-radius:7px;background:#fff;color:var(--ink);vertical-align:.06em;white-space:nowrap}
+.dark kbd{background:#22303B;border-color:#44545F;color:#EEF2F5}
+.plus{margin:0 3px;color:var(--ink-3);font-weight:500}
+.menu{font:600 .9em var(--f-key);background:var(--net-tint);color:var(--net-ink);padding:1px 8px 2px;border-radius:5px;white-space:nowrap}
+.menu i{font-style:normal;opacity:.55;margin:0 5px}
+.dark .menu{background:#243340;color:#F0F4F7}
+.tag{display:inline-flex;align-items:center;gap:6px;font:600 17px/1 var(--f-key);padding:5px 10px 6px;border-radius:5px;white-space:nowrap;vertical-align:.12em}
+.tag.a{background:var(--a-tint);color:var(--a-ink)}
+.tag.b{background:var(--b-tint);color:var(--b-ink)}
+.tag.go{background:var(--ok-tint);color:#1E6E3F}
+.net{font:600 .88em var(--f-key);padding:0 7px 1px;border-radius:4px;white-space:nowrap}
+.net.p{background:var(--pwr-tint);color:#9B1C1C}.net.g{background:#E3E7EA;color:var(--ink)}.net.s{background:var(--net-tint);color:var(--net-ink)}
+.net.c{background:var(--b-tint);color:var(--b-ink)}.net.k{background:#FCEBD0;color:#8A5300}.net.d{background:#D8F0EC;color:#0B5E55}
+.pin{font:600 .9em var(--f-key);color:var(--ink)}
+.warn{font:400 19px/1.4 var(--f-body);color:var(--ink-2);padding:2px 0 2px 14px;border-left:4px solid var(--hl);margin-top:14px}
+.warn b{color:var(--ink)}
+
+[data-step]{opacity:0;transform:translateY(10px);transition:opacity .45s ease,transform .45s ease}
+[data-step].shown{opacity:1;transform:none}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes fadein{to{opacity:1}}
+@keyframes pop{to{opacity:1;transform:none}}
+.gs{opacity:0;transition:opacity .45s ease}
+.s1 .gs.g1,.s2 .gs.g2,.s3 .gs.g3,.s4 .gs.g4,.s5 .gs.g5,.s6 .gs.g6{opacity:1}
+.gs.g0{opacity:1}
+
+/* ---------- U1 symbol ---------- */
+.u1host{position:absolute;left:0;top:0;width:1600px;height:900px;pointer-events:none}
+.u1host svg{position:absolute;left:0;top:0;width:1600px;height:900px;overflow:visible}
+.u1 .u1-body{fill:#FFFDFB;stroke:var(--sym);stroke-width:1.6}
+.u1 .u1-des{font:600 16px var(--f-key);fill:var(--ink);text-anchor:middle}
+.u1 .u1-pn{font:600 15px var(--f-key);fill:var(--ink-2);text-anchor:middle}
+.u1 .stub{stroke:var(--sym);stroke-width:1.4}
+.u1 .pnum{font:600 10.5px var(--f-key);fill:var(--ink-3)}
+.u1 .pname{font:600 12.5px var(--f-key)}
+.u1 .pname.io{fill:#1E3FCC}.u1 .pname.pwr{fill:var(--pwr)}.u1 .pname.gnd{fill:var(--ink)}
+.u1 .dot1{fill:var(--sym)}
+.u1 .tg{opacity:0;transition:opacity .35s ease}
+.u1 .tg.t0{opacity:1}
+.s1 .u1 .tg.t1,.s2 .u1 .tg.t2,.s3 .u1 .tg.t3,.s4 .u1 .tg.t4,.s5 .u1 .tg.t5{opacity:1}
+.u1 .tg .lead{stroke-width:2.4}
+.u1 .tg text{font:600 12.5px var(--f-key)}
+.u1 .pinrow{opacity:1}
+.u1-title .pinrow{opacity:0}
+.active .u1-title .pinrow{animation:fadein .25s ease forwards}
+.u1-title .tg{transition-delay:1.5s}
+
+/* ---------- sub-circuits ---------- */
+.sc{position:absolute;left:96px;width:820px;height:auto;overflow:visible}
+.schem{overflow:visible}
+.schem .k path,.schem .k rect,.schem .k circle{fill:none;stroke:var(--ink);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.schem .k .fill{fill:var(--paper-hi)}
+.schem .k .solid{fill:var(--ink)}
+.schem .w{fill:none;stroke:var(--net);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.schem text{font:600 15px var(--f-key);fill:var(--ink)}
+.schem text.v{font-weight:600;fill:var(--net-ink)}
+.schem text.n{fill:var(--ink-2);font-size:14px}
+.schem text.box{font-size:15px}
+.schem .pl text{font:600 13.5px var(--f-key)}
+
+/* ---------- roadmap ---------- */
+.road-trace{position:absolute;left:0;top:0;width:1600px;height:900px;pointer-events:none}
+.road-trace path{fill:none;stroke:var(--ink-2);stroke-width:7;stroke-linecap:round;stroke-dasharray:1 2;stroke-dashoffset:1}
+.active .road-trace path{animation:draw 1.8s linear .2s forwards}
+.stop{position:absolute;top:330px;width:330px;margin-left:-165px;text-align:center;opacity:0;transform:translateY(10px)}
+.active .stop{animation:pop .45s ease forwards}
+.stop .pad{width:78px;height:78px;border-radius:50%;margin:0 auto 18px;display:grid;place-items:center;font:600 38px/1 var(--f-cond);background:var(--paper-hi);border:4px solid var(--ink-2)}
+.stop h3{font:600 30px/1.1 var(--f-cond);margin:0 0 6px}
+.stop p{font:400 20px/1.35 var(--f-body);color:var(--ink-2);margin:0 auto;max-width:280px}
+.stop .sl{display:block;font:600 16px var(--f-key);color:var(--ink-3);margin-top:8px}
+
+/* ---------- sch vs pcb ---------- */
+.svp{position:absolute;left:96px;top:196px;width:1410px;display:grid;grid-template-columns:1fr 80px 1fr;align-items:center}
+.svp .panel{border:1.5px solid var(--rule);border-radius:10px;padding:18px 22px;height:440px;position:relative}
+.svp .p1{background:var(--paper-hi)}
+.svp .p2{background:var(--board);border-color:var(--board-rule);opacity:0;transform:translateX(16px);transition:opacity .5s,transform .5s}
+.s1 .svp .p2{opacity:1;transform:none}
+.svp h3{margin:0 0 4px;font:600 30px var(--f-cond)}
+.svp .p2 h3{color:var(--board-ink)}
+.svp p{margin:0;font:400 19px/1.35 var(--f-body);color:var(--ink-2)}
+.svp .p2 p{color:var(--board-ink-2)}
+.svp svg{position:absolute;left:22px;right:22px;bottom:18px;width:calc(100% - 44px);height:auto}
+.svp .arrow{text-align:center;font:600 16px var(--f-key);color:var(--ink-3);opacity:0;transition:opacity .4s}
+.s1 .svp .arrow{opacity:1}
+.svp .arrow svg{position:static;width:60px;height:auto;display:block;margin:0 auto 6px}
+
+/* ---------- screen tour ---------- */
+.scr{position:absolute;left:96px;top:186px;width:960px;height:560px;border:1.5px solid var(--rule);border-radius:10px;background:#fff;overflow:hidden;font-family:var(--f-body)}
+.scr>div{position:absolute;transition:box-shadow .3s,background-color .3s}
+.scr .tabs{left:0;right:0;top:0;height:36px;background:#E4E7EA;border-bottom:1px solid #CDD3D8;display:flex;align-items:flex-end;gap:2px;padding:0 0 0 10px}
+.scr .tabs span{font:500 15px var(--f-body);color:var(--ink-2);padding:7px 16px;border-radius:5px 5px 0 0}
+.scr .tabs span.on{background:#fff;color:var(--ink)}
+.scr .menu-bar{left:0;right:0;top:36px;height:34px;border-bottom:1px solid #DDE2E6;display:flex;gap:20px;align-items:center;padding:0 16px;font:600 14px var(--f-key);color:var(--ink-2)}
+.scr .left{left:0;top:70px;width:120px;bottom:0;border-right:1px solid #DDE2E6;background:#F6F7F8;padding:12px 10px;font:500 14px/2.1 var(--f-body);color:var(--ink-2)}
+.scr .canvas{left:120px;right:34px;top:70px;bottom:0;background-image:linear-gradient(#EEF1F3 1px,transparent 1px),linear-gradient(90deg,#EEF1F3 1px,transparent 1px);background-size:12px 12px}
+.scr .canvas .frameA{position:absolute;left:22px;top:18px;bottom:46px;width:10px;border-right:1.5px solid #9B2C2C}
+.scr .canvas .frameA i{position:absolute;left:0;font:600 11px var(--f-key);color:#9B2C2C;font-style:normal}
+.scr .canvas .mini{position:absolute;left:150px;top:44px;width:130px;height:290px;border:1.2px solid var(--sym);background:#FFFDFB}
+.scr .canvas .mini::before{content:"U1  STM32F446RET6";position:absolute;left:0;top:-20px;font:600 11px var(--f-key);color:var(--ink);white-space:nowrap}
+.scr .canvas .mini i{position:absolute;height:1.2px;width:10px;background:var(--sym)}
+.scr .wt{right:150px;top:84px;width:250px;height:100px;background:#fff;border:1px solid #CDD3D8;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.scr .dt{right:44px;top:84px;width:96px;height:270px;background:#fff;border:1px solid #CDD3D8;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.scr .wt b,.scr .dt b{display:block;font:500 13px var(--f-body);color:var(--ink-2);padding:6px 9px;border-bottom:1px solid #E6E9EC}
+.scr .wt svg,.scr .dt svg{display:block;margin:6px auto 0}
+.scr .sheets{left:130px;bottom:6px;height:32px;width:200px;display:flex;gap:6px;align-items:center}
+.scr .sheets span{font:500 15px var(--f-body);color:var(--ink);background:#fff;border:1px solid #CDD3D8;padding:4px 12px;border-radius:4px}
+.scr .right{right:0;top:70px;width:34px;bottom:0;border-left:1px solid #DDE2E6;background:#F6F7F8}
+.scr .badge{position:absolute;width:28px;height:28px;border-radius:50%;background:var(--net);color:#fff;font:600 16px/28px var(--f-key);text-align:center;opacity:0;transform:scale(.6);transition:opacity .3s,transform .3s cubic-bezier(.3,1.6,.5,1);z-index:3}
+.slide[data-cur="1"] .scr .tabs,.slide[data-cur="2"] .scr .menu-bar,.slide[data-cur="3"] .scr .left,.slide[data-cur="4"] .scr .canvas,.slide[data-cur="5"] .scr .wt,.slide[data-cur="6"] .scr .dt,.slide[data-cur="7"] .scr .sheets,.slide[data-cur="8"] .scr .right{box-shadow:inset 0 0 0 3px var(--net),0 0 0 3px var(--net);background-color:rgba(29,93,191,.06)}
+.slide[data-cur="6"] .scr .dt{box-shadow:inset 0 0 0 3px var(--hl),0 0 0 3px var(--hl)}
+.slide[data-cur="1"] .b1,.slide[data-cur="2"] .b2,.slide[data-cur="3"] .b3,.slide[data-cur="4"] .b4,.slide[data-cur="5"] .b5,.slide[data-cur="6"] .b6,.slide[data-cur="7"] .b7,.slide[data-cur="8"] .b8{opacity:1;transform:none}
+.tour{position:absolute;left:1088px;top:180px;width:430px;list-style:none;margin:0;padding:0}
+.tour li{display:grid;grid-template-columns:30px 1fr;gap:10px;margin-bottom:10px;font:400 18px/1.3 var(--f-body);color:var(--ink-2);transition:opacity .3s}
+.tour li b{display:block;font:600 20px/1.2 var(--f-key);color:var(--ink)}
+.tour li .l{width:26px;height:26px;border-radius:50%;border:2px solid var(--net);color:var(--net);font:600 14px/22px var(--f-key);text-align:center;margin-top:1px}
+.slide:not([data-cur="0"]) .tour li{opacity:.3}
+.slide[data-cur="1"] .tour li:nth-child(1),.slide[data-cur="2"] .tour li:nth-child(2),.slide[data-cur="3"] .tour li:nth-child(3),.slide[data-cur="4"] .tour li:nth-child(4),.slide[data-cur="5"] .tour li:nth-child(5),.slide[data-cur="6"] .tour li:nth-child(6),.slide[data-cur="7"] .tour li:nth-child(7),.slide[data-cur="8"] .tour li:nth-child(8){opacity:1}
+
+/* ---------- library dialog ---------- */
+.lib{position:absolute;left:740px;top:176px;width:780px;background:#F7F7F7;border:1.5px solid var(--rule);border-radius:6px;font-family:var(--f-body);overflow:hidden}
+.lib .r{display:flex;align-items:center;gap:16px;padding:9px 14px;font:400 15px var(--f-body);color:var(--ink-2)}
+.lib .r .lab{width:96px;color:var(--ink-3)}
+.lib .chipbtn{padding:4px 10px;border:1px solid transparent;border-radius:3px;white-space:nowrap}
+.lib .chipbtn.on{border-color:#7FA6E8;color:#2E66D0;background:#fff}
+.lib .search{flex:1;border-bottom:1.5px solid #8C98A3;font:600 19px var(--f-key);color:var(--ink);padding:2px 4px;min-height:28px;display:flex;align-items:center}
+.lib .search .typed{display:inline-block;overflow:hidden;white-space:nowrap;width:0;vertical-align:bottom}
+.s1 .lib .search .typed{width:13ch;transition:width 1.1s steps(13)}
+.lib table{width:calc(100% - 28px);margin:6px 14px 10px;border-collapse:collapse;background:#fff;font:400 15px var(--f-body)}
+.lib th{text-align:left;font:600 14px var(--f-key);color:var(--ink);background:#EDEDED;padding:7px 10px;border:1px solid #DDD}
+.lib td{padding:7px 10px;border:1px solid #E5E5E5;color:var(--ink-2);white-space:nowrap}
+.lib td.pnc{color:var(--ink);font-weight:500}
+.lib .rows{opacity:0;transition:opacity .3s 1s}
+.s1 .lib .rows{opacity:1}
+.lib tr.pick td{transition:background-color .3s}
+.s3 .lib tr.pick td{background:#E5EEFC}
+.lib .cls-l{transition:box-shadow .3s}
+.s2 .lib .cls-l{box-shadow:0 0 0 3px var(--hl)}
+.s2 .lib .cls-u{text-decoration:line-through;color:var(--ink-3)}
+.lib .btns{display:flex;justify-content:flex-end;gap:10px;padding:10px 14px 14px}
+.lib .btns span{font:500 15px var(--f-body);color:#fff;background:#A9BEEA;padding:7px 18px;border-radius:4px}
+.lib .btns span.pl{transition:background-color .3s,box-shadow .3s}
+.s3 .lib .btns span.pl{background:#4A7FE8;box-shadow:0 0 0 3px var(--hl)}
+.lib .btns span.cn{background:#4A7FE8}
+
+/* ---------- wiring tools ---------- */
+.wtp{position:absolute;left:96px;top:196px;width:600px}
+.wtp .pal{background:#fff;border:1.5px solid #CDD3D8;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.08);overflow:hidden}
+.wtp .pal b{display:flex;justify-content:space-between;font:500 19px var(--f-body);color:var(--ink-2);padding:10px 16px;border-bottom:1px solid #E6E9EC}
+.wtp .pal svg{display:block;margin:10px auto 14px}
+.wtp .ico .on{fill:none;stroke:#4C5A68;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.wtp .ico text{font:600 10px var(--f-key);fill:#4C5A68;text-anchor:middle}
+.wtp .ico .hlc{fill:none;stroke:var(--net);stroke-width:3;opacity:0;transition:opacity .3s}
+.slide[data-cur="1"] .ico .h1,.slide[data-cur="2"] .ico .h2,.slide[data-cur="3"] .ico .h3,.slide[data-cur="4"] .ico .h4{opacity:1}
+.wt-list{position:absolute;left:760px;top:186px;width:760px;border-collapse:collapse;font:400 19px/1.3 var(--f-body)}
+.wt-list th{text-align:left;font:600 15px var(--f-key);color:var(--ink-3);padding:6px 10px;border-bottom:1.5px solid var(--ink-2)}
+.wt-list td{padding:10px;border-bottom:1px solid var(--line);color:var(--ink-2);vertical-align:top;transition:background-color .3s}
+.wt-list td:first-child{font:600 20px var(--f-key);color:var(--ink);white-space:nowrap}
+.wt-list td:nth-child(2){white-space:nowrap}
+.slide[data-cur="1"] .wt-list .r1 td,.slide[data-cur="2"] .wt-list .r2 td,.slide[data-cur="3"] .wt-list .r3 td,.slide[data-cur="4"] .wt-list .r4 td{background:#FFF1D6}
+
+/* ---------- same net ---------- */
+.nets-scene{position:absolute;left:760px;top:170px;width:760px}
+.nets-scene svg{width:760px;height:auto;display:block;overflow:visible}
+.nets-scene .link{fill:none;stroke:var(--net);stroke-width:2.5;stroke-dasharray:8 7;opacity:0;transition:opacity .5s}
+.s1 .nets-scene .link{opacity:1}
+.nets-scene .cap1{opacity:0;transition:opacity .4s .4s}
+.s1 .nets-scene .cap1{opacity:1}
+.nets-scene .nc{opacity:0;transition:opacity .4s}
+.s2 .nets-scene .nc{opacity:1}
+
+/* ---------- shortcuts ---------- */
+.sc-grid{position:absolute;left:96px;top:196px;width:1410px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:46px}
+.sc-grid h3{font:600 28px var(--f-cond);margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid var(--ink)}
+.sc-grid dl{display:grid;grid-template-columns:max-content 1fr;gap:10px 16px;margin:0;align-items:baseline}
+.sc-grid dt{font-size:21px;white-space:nowrap}
+.sc-grid dd{margin:0;font:400 20px/1.3 var(--f-body);color:var(--ink-2)}
+.sc-links{position:absolute;left:96px;top:700px;display:flex;gap:18px;align-items:center}
+.btn{font:600 21px var(--f-key);text-decoration:none;color:#fff;background:var(--net);padding:11px 20px;border-radius:8px;border:2px solid var(--net)}
+.btn.ghost{background:transparent;color:var(--net)}
+.btn:focus-visible{outline:3px solid var(--hl);outline-offset:3px}
+.sc-note{font:400 18px var(--f-body);color:var(--ink-3);margin-left:8px;max-width:420px;line-height:1.35}
+
+/* ---------- boards ---------- */
+.cards{position:absolute;left:96px;top:196px;width:1410px;display:grid;grid-template-columns:1fr 1fr;gap:44px}
+.card{background:var(--paper-hi);border:1.5px solid var(--rule);border-radius:10px;padding:22px 26px 22px;position:relative}
+.card::before{content:"";position:absolute;left:-1.5px;right:-1.5px;top:-1.5px;height:6px;border-radius:10px 10px 0 0}
+.card.a::before{background:var(--a)}.card.b::before{background:var(--b)}
+.card.b{box-shadow:0 0 0 3px var(--b-tint)}
+.card h3{margin:8px 0 4px;font:600 38px/1.05 var(--f-cond)}
+.card .job{font:400 21px/1.35 var(--f-body);color:var(--ink-2);margin:0 0 14px}
+.card dl{margin:0;display:grid;grid-template-columns:120px 1fr;gap:7px 12px;font:400 19px/1.3 var(--f-body)}
+.card dt{font:600 17px/1.5 var(--f-key);color:var(--ink-3)}
+.card dd{margin:0}
+.card .why{margin:16px 0 0;padding-top:12px;border-top:1px solid var(--line);font:400 19px/1.4 var(--f-body);color:var(--ink-2)}
+.carry{position:absolute;left:96px;top:196px;width:1410px;display:grid;grid-template-columns:1fr 1fr;gap:56px}
+.carry h3{font:600 30px var(--f-cond);margin:0 0 10px;padding-bottom:8px;border-bottom:2px solid var(--ink);display:flex;gap:10px;align-items:center}
+.carry ul{list-style:none;margin:0;padding:0}
+.carry li{font:400 21px/1.35 var(--f-body);color:var(--ink-2);padding:10px 0;border-bottom:1px solid var(--line)}
+.carry li b{color:var(--ink);font-weight:600}
+
+/* ---------- blocks ---------- */
+.blocks{position:absolute;left:96px;top:176px;width:1410px;height:600px}
+.blocks svg{width:1410px;height:600px;overflow:visible}
+.blocks .chipb{fill:#FFFDFB;stroke:var(--sym);stroke-width:2.5}
+.blocks .bx{fill:var(--paper-hi);stroke:var(--ink-2);stroke-width:2}
+.blocks .bn{font:600 22px var(--f-cond);fill:#fff;text-anchor:middle}
+.blocks .bt{font:600 23px var(--f-key);fill:var(--ink)}
+.blocks .bs{font:400 16px var(--f-body);fill:var(--ink-2)}
+.blocks .ln{fill:none;stroke:var(--net);stroke-width:3;stroke-dasharray:1 2;stroke-dashoffset:1}
+.blocks .blk{opacity:0;transform:translateY(8px)}
+.active .blocks .blk{animation:pop .4s ease forwards}
+.active .blocks .ln{animation:draw .5s ease forwards}
+
+/* ---------- meet ---------- */
+.legend{list-style:none;margin:6px 0 0;padding:0}
+.legend li{display:grid;grid-template-columns:62px 1fr;gap:14px;align-items:start;margin-bottom:14px}
+.legend .cnt{font:600 40px/1 var(--f-cond);text-align:right}
+.legend b{display:block;font:600 22px/1.2 var(--f-key)}
+.legend span{font:400 18px/1.35 var(--f-body);color:var(--ink-2)}
+
+/* ---------- check ---------- */
+.dm{position:absolute;left:820px;top:180px;width:700px;background:#fff;border:1.5px solid var(--rule);border-radius:6px;overflow:hidden;font-family:var(--f-body)}
+.dm .h{display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);font:600 17px var(--f-key)}
+.dm .h span{font:500 14px var(--f-body);color:var(--ink-3)}
+.dm .row{display:flex;gap:10px;align-items:center;padding:8px 14px;border-bottom:1px solid #EEF1F3;font:400 16px var(--f-body);color:var(--ink-2)}
+.dm .row .ic{width:16px;height:16px;border-radius:50%;flex:none}
+.dm .row .ic.e{background:var(--err)}.dm .row .ic.ok{background:var(--ok)}.dm .row .ic.f{background:#C8CFD6;border-radius:3px}
+.dm .bad{transition:opacity .3s}
+.s2 .dm .bad{display:none}
+.dm .good{display:none}
+.s2 .dm .good{display:flex}
+.dm .sub{padding-left:40px}
+
+/* ---------- layout (dark) ---------- */
+.lay{position:absolute;left:760px;top:140px;width:760px}
+.lay svg{width:760px;height:auto;display:block;overflow:visible}
+.lay .pad{fill:#6B3A36}
+.lay .pad.key{fill:var(--cu-top)}
+.lay .body{fill:#1A252E;stroke:var(--silk);stroke-width:2}
+.lay .part .p{fill:var(--cu-top)}
+.lay .part .o{fill:none;stroke:var(--silk);stroke-width:1.6}
+.lay text{font:600 14px var(--f-key);fill:var(--board-ink)}
+.lay text.s{fill:var(--silk);font-size:13px}
+.lay .edge{fill:none;stroke:var(--edge);stroke-width:3}
+.lay .tr{fill:none;stroke:var(--cu-top);stroke-width:3;stroke-linecap:round}
+
+/* ---------- tasks ---------- */
+.tasks{position:absolute;left:96px;top:186px;width:1410px;display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.task{background:var(--paper-hi);border:1.5px solid var(--rule);border-radius:10px;padding:16px 20px 14px;display:flex;flex-direction:column}
+.task h3{margin:0 0 4px;font:600 26px/1.1 var(--f-cond);display:flex;gap:10px;align-items:center}
+.task .pins{font:600 16px var(--f-key);color:var(--ink-3);margin-bottom:8px}
+.task p{margin:0 0 10px;font:400 17px/1.38 var(--f-body);color:var(--ink-2);flex:1}
+.task p b{color:var(--ink);font-weight:600}
+.task .own{display:flex;gap:8px;align-items:flex-end;font:500 15px var(--f-body);color:var(--ink-3)}
+.task .own i{flex:1;border-bottom:1.5px solid var(--rule);height:16px}
+.task .st{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;border:2px solid var(--net);color:var(--net);font:600 16px var(--f-key);flex:none}
+
+/* ---------- sheets ---------- */
+.sheets3{position:absolute;left:96px;top:300px;width:1410px;height:380px}
+.sheets3 svg{width:1410px;height:380px;overflow:visible}
+.sheets3 .pg{fill:#fff;stroke:var(--rule);stroke-width:1.5}
+.sheets3 .pgt{font:600 22px var(--f-cond);fill:var(--ink)}
+.sheets3 .tab{font:500 15px var(--f-body);fill:var(--ink-2)}
+.sheets3 .lnk{fill:none;stroke:var(--net);stroke-width:2.5;stroke-dasharray:8 7;opacity:0;transition:opacity .5s}
+.s1 .sheets3 .lnk{opacity:1}
+.agree{position:absolute;left:96px;top:196px;width:1410px;font:400 21px/1.4 var(--f-body);color:var(--ink-2)}
+.agree .nl{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.agree .nl .net{font-size:18px;padding:3px 9px}
+
+/* ---------- faq ---------- */
+.faq{position:absolute;left:96px;top:186px;width:1410px;display:grid;grid-template-columns:1fr 1fr;gap:16px 48px}
+.faq div{border-bottom:1px solid var(--line);padding-bottom:12px}
+.faq b{display:block;font:600 22px/1.25 var(--f-key);color:var(--ink);margin-bottom:4px}
+.faq span{font:400 18.5px/1.4 var(--f-body);color:var(--ink-2)}
+
+.res{list-style:none;margin:28px 0 0;padding:0;columns:2;column-gap:64px;width:1400px}
+.res li{break-inside:avoid;margin-bottom:20px;font:400 19px/1.35 var(--f-body);color:var(--ink-2)}
+.res a{display:block;font:600 22px var(--f-key);color:var(--ink);text-decoration:none;border-bottom:1.5px solid var(--rule);width:max-content;margin-bottom:2px}
+.res a:hover{border-color:var(--net)}
+.res a:focus-visible{outline:3px solid var(--hl);outline-offset:3px}
+
+#notes{position:fixed;left:0;right:0;bottom:0;max-height:38vh;overflow:auto;background:#0F161C;color:#E6ECF1;font:400 19px/1.55 var(--f-body);padding:16px 28px 20px;transform:translateY(105%);transition:transform .3s ease;z-index:10;border-top:3px solid var(--net)}
+#notes h5{margin:0 0 6px;font:600 14px var(--f-key);color:#97A5B2}
+body.show-notes #notes{transform:none}
+#help{position:fixed;right:16px;bottom:16px;background:#0F161C;color:#E6ECF1;font:400 15px/1.6 var(--f-body);padding:12px 16px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:11}
+#help kbd{font-size:13px;padding:0 6px 1px;border-bottom-width:2px;background:#22303B;border-color:#44545F;color:#fff}
+body.show-help #help{opacity:1}
+#navbtns{position:fixed;left:14px;bottom:14px;display:flex;gap:6px;z-index:9;opacity:0;transition:opacity .3s}
+body.pointer #navbtns{opacity:.7}
+#navbtns button{width:42px;height:38px;border-radius:7px;border:0;background:#0F161C;color:#fff;font:600 20px var(--f-key);cursor:pointer}
+#navbtns button:focus-visible{outline:3px solid var(--hl)}
+.notes{display:none}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01s!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:.01s!important;transition-delay:0s!important}
+}
+</style>
+</head>
+<body>
+<div id="viewport"><div id="deck">
+
+<!-- 1 Title -->
+<section class="slide" data-title="Introduction" data-part="–">
+  <div class="content" style="top:160px;width:720px">
+    <h1>From the basics to your first STM32 board</h1>
+    <p class="lead" style="margin-top:34px">Learn the EasyEDA tools, then wire up an STM32F446RET6 one block at a time.</p>
+    <p class="hint">Arrow keys or a clicker move through. Press N for speaker notes.</p>
+  </div>
+  <div class="u1host" data-u1="title"></div>
+  <aside class="notes">Welcome. The plan is simple: first the handful of EasyEDA tools you need, then a quick look at the two boards we're planning, then we wire up the STM32F446 on the right one block at a time. By the end everyone should know which pins connect where and be able to pick up a piece of the schematic.</aside>
+</section>
+
+<!-- 2 Plan -->
+<section class="slide" data-title="Today's plan" data-part="–">
+  <div class="content wide"><h2>Today's plan</h2></div>
+  <svg class="road-trace" viewBox="0 0 1600 900" aria-hidden="true"><path pathLength="1" d="M160 369 H1440"/></svg>
+  <div class="stop" style="left:250px;animation-delay:.2s"><div class="pad">1</div><h3>The basics</h3><p>The EasyEDA screen, finding parts, wires and net labels.</p><span class="sl">Slides 3–8</span></div>
+  <div class="stop" style="left:617px;animation-delay:.7s"><div class="pad">2</div><h3>Two boards</h3><p>The robot I/O hub and the fast control loop. Why we build the F446 first.</p><span class="sl">Slides 9–10</span></div>
+  <div class="stop" style="left:983px;animation-delay:1.2s"><div class="pad">3</div><h3>Build the F446 core</h3><p>Seven blocks, wired pin by pin on our own symbol.</p><span class="sl">Slides 11–21</span></div>
+  <div class="stop" style="left:1350px;animation-delay:1.7s"><div class="pad" style="border-color:var(--ok);color:var(--ok)">4</div><h3>Start working</h3><p>Pick a block, split the sheets, and your questions.</p><span class="sl">Slides 22–25</span></div>
+  <aside class="notes">Four parts. Stop me at any point; the last part is set aside for questions, but questions during the build are better.</aside>
+</section>
+
+<!-- 3 Schematic vs PCB -->
+<section class="slide" data-title="Schematic and PCB" data-part="1 Basics" data-steps="1">
+  <div class="content wide"><h2>Two drawings of the same circuit</h2></div>
+  <div class="svp">
+    <div class="panel p1"><h3>Schematic</h3><p>What connects to what. Symbols and wires, arranged to be easy to read.</p>
+      <svg viewBox="0 0 600 250" aria-hidden="true" id="svpSch" class="schem"></svg></div>
+    <div class="arrow"><svg viewBox="0 0 60 30"><path d="M2 15 H50 M40 5 L54 15 L40 25" fill="none" stroke="#7D8A96" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Convert<br>to PCB</div>
+    <div class="panel p2"><h3>PCB</h3><p>Where each part physically sits, and the copper that joins them.</p>
+      <svg viewBox="0 0 600 250" aria-hidden="true" id="svpPcb"></svg></div>
+  </div>
+  <aside class="notes">Everything today happens in the schematic: we're describing connections. Later, Convert to PCB turns each symbol into its footprint, the real copper pads, and the thin lines show the connections we still have to route as copper.</aside>
+</section>
+
+<!-- 4 Screen tour -->
+<section class="slide" data-title="The EasyEDA screen" data-part="1 Basics" data-steps="8">
+  <div class="content wide"><h2>The EasyEDA Standard screen</h2></div>
+  <div class="scr">
+    <div class="tabs"><span>Start</span><span class="on">*New Project</span></div>
+    <div class="menu-bar"><span>File</span><span>Edit</span><span>Place</span><span>Design</span><span>Fabrication</span><span>…</span></div>
+    <div class="left">Projects<br>Library<br>Design</div>
+    <div class="canvas"><div class="frameA"><i style="top:60px">A</i><i style="top:200px">B</i><i style="top:340px">C</i></div><div class="mini" id="scrMini"></div></div>
+    <div class="wt"><b>Wiring Tools</b><svg width="236" height="60" viewBox="0 0 236 60" id="scrWt"></svg></div>
+    <div class="dt"><b>Drawing…</b><svg width="80" height="220" viewBox="0 0 80 220" id="scrDt"></svg></div>
+    <div class="sheets"><span>*Sheet_1 ⌃</span><span>+</span></div>
+    <div class="right"></div>
+    <span class="badge b1" style="left:250px;top:4px">1</span>
+    <span class="badge b2" style="left:470px;top:40px">2</span>
+    <span class="badge b3" style="left:84px;top:80px">3</span>
+    <span class="badge b4" style="left:300px;top:380px">4</span>
+    <span class="badge b5" style="left:540px;top:88px">5</span>
+    <span class="badge b6" style="left:830px;top:88px">6</span>
+    <span class="badge b7" style="left:340px;top:524px">7</span>
+    <span class="badge b8" style="left:900px;top:300px">8</span>
+  </div>
+  <ol class="tour">
+    <li><span class="l">1</span><div><b>Document tabs</b>Each open schematic or PCB.</div></li>
+    <li><span class="l">2</span><div><b>Menus</b>File, Design and Fabrication hold most commands.</div></li>
+    <li><span class="l">3</span><div><b>Left panel</b>Your projects, the Library (<kbd>Shift</kbd><span class="plus">+</span><kbd>F</kbd>) and the Design manager (<kbd>Ctrl</kbd><span class="plus">+</span><kbd>D</kbd>).</div></li>
+    <li><span class="l">4</span><div><b>Canvas</b>The sheet with its A, B, C zone border.</div></li>
+    <li><span class="l">5</span><div><b>Wiring Tools</b>Anything that makes an electrical connection.</div></li>
+    <li><span class="l">6</span><div><b>Drawing Tools</b>Lines, shapes and text. These never connect anything.</div></li>
+    <li><span class="l">7</span><div><b>Sheet tabs</b><b style="display:inline">+</b> adds another sheet to the same schematic.</div></li>
+    <li><span class="l">8</span><div><b>Right panel</b>Properties of whatever you select. Click the edge to open it.</div></li>
+  </ol>
+  <aside class="notes">This matches what's on your screen. The one people get wrong is number 6: a line from the Drawing Tools looks exactly like a wire but connects nothing, so the PCB comes out with missing connections. If it should carry current, use the Wiring Tools.</aside>
+</section>
+
+<!-- 5 Library -->
+<section class="slide" data-title="Find and place a part" data-part="1 Basics" data-steps="3">
+  <div class="content">
+    <h2>Find and place a part</h2>
+    <ul class="points">
+      <li><kbd>Shift</kbd><span class="plus">+</span><kbd>F</kbd> opens the Library. Type the part number and press Enter.</li>
+      <li>Prefer the <b>LCSC</b> or <b>JLCPCB Assembled</b> class. Those parts link to a real stock number; user-contributed ones can contain mistakes.</li>
+      <li>Check the footprint column before you place.</li>
+      <li>Hover the preview and click <b>Place</b>, then click on the canvas. Right-click or <kbd>Esc</kbd> stops placing.</li>
+    </ul>
+  </div>
+  <div class="lib">
+    <div class="r"><span class="lab">Search Engine</span><span class="chipbtn on">EasyEDA</span><span>LCSC Electronics</span><span class="search"><span class="typed">STM32F446RET6</span></span></div>
+    <div class="r"><span class="lab">Types</span><span class="chipbtn on">Symbol</span><span>Footprint</span><span>Spice Symbol</span><span>SCH Module</span><span>3D Model</span></div>
+    <div class="r"><span class="lab">Classes</span><span>Work Space(0)</span><span class="chipbtn on cls-l">LCSC(2)</span><span>JLCPCB Assembled(2)</span><span class="cls-u">User Contributed(139)</span></div>
+    <table class="rows"><thead><tr><th>Title (PartNO)</th><th>Footprint</th><th>JLCPCB Part Class</th></tr></thead>
+      <tbody><tr><td class="pnc">STM32F446RET6TR</td><td>LQFP-64_L10.0-W10.0-P0.50-LS12.0-BL</td><td>Extended Part</td></tr>
+      <tr class="pick"><td class="pnc">STM32F446RET6</td><td>LQFP-64_L10.0-W10.0-P0.50-LS12.0-BL</td><td>Extended Part</td></tr></tbody></table>
+    <div class="btns"><span>Edit</span><span class="pl">Place</span><span class="cn">Cancel</span></div>
+  </div>
+  <aside class="notes">These are the real results from our search. The TR version is the same chip on a reel. LCSC shows 2 results, User Contributed shows 139: stick with the LCSC ones, which are tied to a part you can actually buy and have JLCPCB assemble.</aside>
+</section>
+
+<!-- 6 Wiring tools -->
+<section class="slide" data-title="Wiring Tools" data-part="1 Basics" data-steps="4">
+  <div class="content"><h2>The Wiring Tools you'll use</h2></div>
+  <div class="wtp" style="top:186px">
+    <div class="pal"><b><span>Wiring Tools</span><span>—</span></b><svg class="ico" width="520" height="150" viewBox="0 0 520 150" id="wtBig"></svg></div>
+    <p class="warn"><b>Drawing Tools lines are not wires.</b> They look the same on screen but carry no connection to the PCB.</p>
+  </div>
+  <table class="wt-list">
+    <thead><tr><th>Tool</th><th>Key</th><th>Use it for</th></tr></thead>
+    <tbody>
+      <tr class="r1"><td>Wire</td><td><kbd>W</kbd></td><td>Short connections between nearby pins. Clicking a pin also starts a wire.</td></tr>
+      <tr class="r2"><td>Net Label</td><td><kbd>N</kbd></td><td>Naming a connection, so it can join pins anywhere without a long wire.</td></tr>
+      <tr class="r3"><td>VCC / GND flags</td><td><kbd>Ctrl</kbd><span class="plus">+</span><kbd>Q</kbd> <kbd>Ctrl</kbd><span class="plus">+</span><kbd>G</kbd></td><td>Power and ground. Rename the VCC flag to <span class="net p">+3V3</span> in its properties.</td></tr>
+      <tr class="r4"><td>No Connect Flag</td><td></td><td>Marking a pin you're leaving unused on purpose.</td></tr>
+    </tbody>
+  </table>
+  <aside class="notes">Four tools cover nearly the whole MCU schematic. Bus and bus entry are for very large designs; we won't need them. The VCC flag defaults to the name VCC. We'll rename it +3V3 so the name says what it is, then copy that flag for every 3.3 V pin.</aside>
+</section>
+
+<!-- 7 Same name same net -->
+<section class="slide" data-title="Same name, same net" data-part="1 Basics" data-steps="2">
+  <div class="content">
+    <h2>Same name, same connection</h2>
+    <ul class="points">
+      <li>Every Net Label, Net Flag or Net Port with the same name is one connection, even with no wire between them.</li>
+      <li>This keeps a big schematic readable: a short wire and a label at each pin.</li>
+      <li>Names must match exactly. <span class="net p">+3V3</span> and <span class="net p">3V3</span> are two different nets.</li>
+      <li data-step="2">Put a No Connect Flag on any pin you leave empty, so the Design manager knows it's on purpose.</li>
+    </ul>
+  </div>
+  <div class="nets-scene"><svg viewBox="0 0 760 520" aria-hidden="true" id="netsSvg" class="schem"></svg></div>
+  <aside class="notes">Click once to show that the three +3V3 flags are one net. Click again for the No Connect flag. This is the technique we'll use for every block of the F446: a short stub on the pin, then a net label.</aside>
+</section>
+
+<!-- 8 Shortcuts -->
+<section class="slide" data-title="Shortcuts" data-part="1 Basics">
+  <div class="content wide"><h2>EasyEDA Standard shortcuts</h2></div>
+  <div class="sc-grid">
+    <div><h3>Everywhere</h3><dl>
+      <dt><kbd>Shift</kbd><span class="plus">+</span><kbd>F</kbd></dt><dd>Search the library</dd>
+      <dt><kbd>Space</kbd></dt><dd>Rotate</dd>
+      <dt><kbd>X</kbd> <kbd>Y</kbd></dt><dd>Flip horizontal or vertical</dd>
+      <dt><kbd>A</kbd> <kbd>Z</kbd></dt><dd>Zoom in or out</dd>
+      <dt><kbd>K</kbd></dt><dd>Fit everything on screen</dd>
+      <dt><kbd>Esc</kbd></dt><dd>Stop the current tool</dd>
+      <dt><kbd>Ctrl</kbd><span class="plus">+</span><kbd>S</kbd></dt><dd>Save</dd>
+      <dt><kbd>Ctrl</kbd><span class="plus">+</span><kbd>D</kbd></dt><dd>Design manager</dd></dl></div>
+    <div><h3>Schematic</h3><dl>
+      <dt><kbd>W</kbd></dt><dd>Wire</dd>
+      <dt><kbd>N</kbd></dt><dd>Net Label</dd>
+      <dt><kbd>Ctrl</kbd><span class="plus">+</span><kbd>Q</kbd></dt><dd>VCC flag</dd>
+      <dt><kbd>Ctrl</kbd><span class="plus">+</span><kbd>G</kbd></dt><dd>GND flag</dd>
+      <dt><kbd>T</kbd></dt><dd>Text</dd>
+      <dt><kbd>I</kbd></dt><dd>Edit the selected symbol</dd>
+      <dt><kbd>Alt</kbd><span class="plus">+</span><kbd>F</kbd></dt><dd>Footprint manager</dd></dl></div>
+    <div><h3>PCB</h3><dl>
+      <dt><kbd>W</kbd></dt><dd>Track</dd>
+      <dt><kbd>V</kbd></dt><dd>Via</dd>
+      <dt><kbd>T</kbd> <kbd>B</kbd></dt><dd>Top or bottom layer</dd>
+      <dt><kbd>L</kbd></dt><dd>Change routing angle</dd>
+      <dt><kbd>H</kbd></dt><dd>Highlight a net</dd>
+      <dt><kbd>E</kbd></dt><dd>Copper area</dd>
+      <dt><kbd>Shift</kbd><span class="plus">+</span><kbd>B</kbd></dt><dd>Rebuild copper areas</dd></dl></div>
+  </div>
+  <div class="sc-links">
+    <a class="btn" href="F446-Build-Sheet.pdf" download>Download the build sheet</a>
+    <span class="sc-note">Page 2 of the build sheet has the full Standard shortcut list. Hold the right mouse button to pan.</span>
+  </div>
+  <aside class="notes">These are EasyEDA Standard's default keys, the editor on your screen. The printable build sheet has the full list on page 2. In EasyEDA Pro some keys differ, so make sure the handout matches the editor people are using.</aside>
+</section>
+
+<!-- 9 Two boards -->
+<section class="slide" data-title="Two boards" data-part="2 Boards">
+  <div class="content wide"><h2>Two boards, one at a time</h2></div>
+  <div class="cards">
+    <article class="card a"><span class="tag a">Board A · next</span>
+      <h3>Robot I/O hub</h3>
+      <p class="job">Connects to a large array of sensors, actuators and buses, and joins the robot's network.</p>
+      <dl><dt>MCU</dt><dd>STM32F407VGT6, LQFP-100</dd><dt>Speed</dt><dd>168 MHz</dd><dt>Memory</dt><dd>1 MB flash, 192 KB RAM</dd><dt>I/O</dt><dd>82 GPIOs, Ethernet MAC, 2× CAN</dd></dl>
+      <p class="why">More pins, more power pins and an Ethernet PHY to add. Easier once the F446 is done.</p></article>
+    <article class="card b"><span class="tag go">Board B · building now</span>
+      <h3>Fast control loop</h3>
+      <p class="job">A smaller board for a drone or motor controller that needs top speed, audio or fast external memory.</p>
+      <dl><dt>MCU</dt><dd>STM32F446RET6, LQFP-64</dd><dt>Speed</dt><dd>180 MHz</dd><dt>Memory</dt><dd>512 KB flash, 128 KB RAM</dd><dt>I/O</dt><dd>50 GPIOs, Quad-SPI, 2× SAI audio</dd></dl>
+      <p class="why">Fewer pins to wire and route, and everything we learn carries straight over to Board A.</p></article>
+  </div>
+  <aside class="notes">Both boards use the same STM32F4 family, so the core circuit is nearly identical. We start with the 64-pin F446 because there's less to wire and route, which makes it a better first board. The full part-selection talk, mcu-parts.html, goes deeper into choosing between them.</aside>
+</section>
+
+<!-- 10 Carry over -->
+<section class="slide" data-title="What carries over" data-part="2 Boards">
+  <div class="content wide"><h2>What carries over to Board A</h2></div>
+  <div class="carry">
+    <div><h3><span class="tag go">Same</span>on both boards</h3><ul>
+      <li><b>Power and decoupling:</b> 100 nF per VDD pin plus a bulk capacitor; VDDA filtered.</li>
+      <li><b>Reset and boot:</b> 100 nF on NRST, 10 kΩ from BOOT0 to GND.</li>
+      <li><b>Crystals:</b> the same start-up check and load-capacitor math.</li>
+      <li><b>Debug:</b> the same SWD header on PA13 and PA14.</li>
+      <li><b>USB:</b> the same PA11 and PA12 pins.</li></ul></div>
+    <div><h3><span class="tag a">Changes</span>on Board A</h3><ul>
+      <li><b>100 pins:</b> more VDD and VSS pairs, so more 100 nF capacitors.</li>
+      <li><b>Two VCAP pins:</b> 2.2 µF on each, instead of one 4.7 µF.</li>
+      <li><b>Ethernet:</b> an external PHY chip and an RJ45 jack with magnetics.</li>
+      <li><b>Clock:</b> at 168 MHz, USB's 48 MHz comes straight from the main PLL.</li>
+      <li><b>Pin numbers:</b> every pin moves, so use the F407's own symbol.</li></ul></div>
+  </div>
+  <aside class="notes">This is why the F446 is a good first build: about three quarters of the work transfers to Board A unchanged. The VCAP difference is the one to remember; it's a common mistake when people copy a schematic between packages.</aside>
+</section>
+
+<!-- 11 Seven blocks -->
+<section class="slide" data-title="Seven blocks" data-part="3 Build">
+  <div class="content wide"><h2>Seven blocks, built in this order</h2></div>
+  <div class="blocks"><svg viewBox="0 0 1410 600" aria-hidden="true" id="blocksSvg"></svg></div>
+  <aside class="notes">Every STM32 board needs blocks 1 to 5 just to start and be programmed. Block 6 gives it power and USB from one connector, and block 7 proves it's alive. The number on each block is its step and the slide where we wire it.</aside>
+</section>
+
+<!-- 12 Meet your symbol -->
+<section class="slide" data-title="Meet your symbol" data-part="3 Build" data-steps="5">
+  <div class="content" style="width:620px">
+    <h2>Meet your symbol</h2>
+    <p class="lead" style="font-size:22px;margin-bottom:18px">64 pins: 14 for power and control, 50 general I/O. The symbol puts 32 on each side for easy wiring; the real chip has 16 on each of its four sides.</p>
+    <ul class="legend">
+      <li data-step="1"><span class="cnt" style="color:var(--pwr)">11</span><div><b>Power and ground</b><span>VDD ×4, VDDA, VBAT, VSS ×4, VSSA</span></div></li>
+      <li data-step="2"><span class="cnt" style="color:var(--b)">3</span><div><b>Control</b><span>NRST, BOOT0 and VCAP_1</span></div></li>
+      <li data-step="3"><span class="cnt" style="color:#B26B00">4</span><div><b>Crystal pins</b><span>PH0, PH1 for the 8 MHz HSE; PC14, PC15 for the 32.768 kHz LSE</span></div></li>
+      <li data-step="4"><span class="cnt" style="color:#0F7F73">4</span><div><b>Debug and USB</b><span>PA13, PA14 for SWD; PA11, PA12 for USB</span></div></li>
+      <li data-step="5"><span class="cnt" style="color:var(--ok)">42</span><div><b>Free for the project</b><span>Motors, sensors, Quad-SPI, audio: assigned later in CubeMX</span></div></li>
+    </ul>
+  </div>
+  <div class="u1host" data-u1="meet"></div>
+  <aside class="notes">This is the exact symbol from our schematic, pin numbers and all. Click through the groups. The first two groups aren't I/O at all, which is why a 64-pin chip has 50 GPIOs. The crystal, debug and USB pins are ordinary GPIOs that we reserve. That leaves 42 for the actual project.</aside>
+</section>
+
+<!-- 13 Step 1 power -->
+<section class="slide" data-title="Step 1: Power" data-part="3 Build" data-steps="3">
+  <div class="content">
+    <h2><span class="num">1</span>Power and ground</h2>
+    <ul class="points">
+      <li data-step="1">Pins <span class="pin">19, 32, 48, 64</span> (VDD) and <span class="pin">1</span> (VBAT): a short stub and a <span class="net p">+3V3</span> flag on each.</li>
+      <li data-step="2">Pins <span class="pin">18, 31, 47, 63</span> (VSS): a <span class="net g">GND</span> flag on each.</li>
+      <li data-step="3">One 100 nF capacitor per power pin, and one 4.7 µF for the whole chip.</li>
+    </ul>
+  </div>
+  <svg class="sc schem gs g3" style="top:470px" viewBox="0 0 820 230" aria-hidden="true" id="sc1"></svg>
+  <div class="u1host" data-build="1"></div>
+  <aside class="notes">VBAT powers the real-time clock's backup domain. With no coin cell, tie it to 3.3 V with its own 100 nF, as the datasheet says. On the schematic the capacitors can sit together; on the PCB each 100 nF must be right next to its own pin.</aside>
+</section>
+
+<!-- 14 Step 2 VDDA VCAP -->
+<section class="slide" data-title="Step 2: VDDA and VCAP" data-part="3 Build" data-steps="2">
+  <div class="content">
+    <h2><span class="num">2</span>Analog supply and VCAP</h2>
+    <ul class="points">
+      <li data-step="1">Pin <span class="pin">13</span> (VDDA) gets <span class="net p">VDDA</span>: 3.3 V through a ferrite bead, with 1 µF + 100 nF. Pin <span class="pin">12</span> (VSSA) to <span class="net g">GND</span>.</li>
+      <li data-step="2">Pin <span class="pin">30</span> (VCAP_1): one 4.7 µF low-ESR ceramic to GND. Nothing else.</li>
+    </ul>
+    <p class="warn" data-step="2"><b>Never connect VCAP to 3.3 V.</b> It's the output of the chip's internal 1.2 V core regulator.</p>
+  </div>
+  <svg class="sc schem" style="top:500px" viewBox="0 0 820 220" aria-hidden="true" id="sc2"></svg>
+  <div class="u1host" data-build="2"></div>
+  <aside class="notes">The ADC measures against VDDA, so noise on VDDA becomes noise in every reading; the ferrite bead and capacitors filter it. The bead is optional for a first board: a 0 Ω resistor in its place works. VCAP is the big one: wrong value, high-ESR capacitor, or tied to 3.3 V, and the chip won't run or won't show up in the debugger.</aside>
+</section>
+
+<!-- 15 Step 3 reset boot -->
+<section class="slide" data-title="Step 3: Reset and boot" data-part="3 Build" data-steps="2">
+  <div class="content">
+    <h2><span class="num">3</span>Reset and boot</h2>
+    <ul class="points">
+      <li data-step="1">Pin <span class="pin">7</span> (NRST) gets <span class="net c">NRST</span>: 100 nF to GND. A reset button to GND is optional. The chip has its own pull-up.</li>
+      <li data-step="2">Pin <span class="pin">60</span> (BOOT0) gets <span class="net c">BOOT0</span>: 10 kΩ to GND, so the chip runs your program from flash.</li>
+      <li class="aside" data-step="2">Want ST's built-in bootloader later? Add a jumper that pulls BOOT0 to 3.3 V.</li>
+    </ul>
+  </div>
+  <svg class="sc schem" style="top:500px" viewBox="0 0 820 220" aria-hidden="true" id="sc3"></svg>
+  <div class="u1host" data-build="3"></div>
+  <aside class="notes">Floating BOOT0 is a classic first-board bug: the chip sometimes boots into ST's bootloader instead of your program, and it looks like the board is dead. The NRST net also goes to the debug header in step 5, so the programmer can reset the chip.</aside>
+</section>
+
+<!-- 16 Step 4 crystals -->
+<section class="slide" data-title="Step 4: Crystals" data-part="3 Build" data-steps="2">
+  <div class="content">
+    <h2><span class="num">4</span>Crystals</h2>
+    <ul class="points">
+      <li data-step="1">Pins <span class="pin">5, 6</span> (PH0, PH1): the 8 MHz HSE crystal and two load capacitors.</li>
+      <li data-step="2">Pins <span class="pin">3, 4</span> (PC14, PC15): the 32.768 kHz LSE crystal, only if you use the real-time clock.</li>
+      <li>Each load capacitor is 2 × (C<sub>L</sub> − C<sub>stray</sub>). Check the crystal with the calculator in the parts talk.</li>
+    </ul>
+  </div>
+  <svg class="sc schem" style="top:470px" viewBox="0 0 820 270" aria-hidden="true" id="sc4"></svg>
+  <div class="u1host" data-build="4"></div>
+  <aside class="notes">The 8 MHz crystal feeds the PLL. At 180 MHz, USB's 48 MHz comes from the second PLL, PLLSAI. The crystal calculator is slide 17 of mcu-parts.html. Pick a low-ESR 32.768 kHz crystal with about 6 pF load capacitance; the common 12.5 pF watch crystals fail the start-up check on this chip.</aside>
+</section>
+
+<!-- 17 Step 5 SWD -->
+<section class="slide" data-title="Step 5: Debug header" data-part="3 Build" data-steps="2">
+  <div class="content">
+    <h2><span class="num">5</span>Debug header</h2>
+    <ul class="points">
+      <li data-step="1">Pin <span class="pin">46</span> (PA13) is <span class="net d">SWDIO</span>, pin <span class="pin">49</span> (PA14) is <span class="net d">SWCLK</span>.</li>
+      <li data-step="1">A 5-pin header: +3V3, SWDIO, SWCLK, NRST, GND. Print the pin names on the silkscreen.</li>
+      <li data-step="2">Optional: pin <span class="pin">55</span> (PB3) as <span class="net d">SWO</span>, for printing debug messages over the same cable.</li>
+    </ul>
+    <p class="warn">Any ST-LINK programmer works, including the one built into a Nucleo board.</p>
+  </div>
+  <svg class="sc schem" style="top:520px" viewBox="0 0 820 220" aria-hidden="true" id="sc5"></svg>
+  <div class="u1host" data-build="5"></div>
+  <aside class="notes">This is how the chip gets programmed and debugged, so it is not optional. Never reuse PA13 and PA14 for anything else in firmware, or you lock yourself out until you connect under reset. The header is our own simple pinout; any order works as long as the silkscreen says what each pin is.</aside>
+</section>
+
+<!-- 18 Step 6 USB-C -->
+<section class="slide" data-title="Step 6: USB-C" data-part="3 Build" data-steps="2">
+  <div class="content">
+    <h2><span class="num">6</span>USB-C power and data</h2>
+    <ul class="points">
+      <li data-step="1">VBUS (5 V) goes to a 3.3 V regulator that makes <span class="net p">+3V3</span>. Use the capacitors its datasheet asks for.</li>
+      <li data-step="1">CC1 and CC2 each get their own 5.1 kΩ to GND, or USB-C chargers won't turn on.</li>
+      <li data-step="2">D− to pin <span class="pin">44</span> (PA11), D+ to pin <span class="pin">45</span> (PA12), through an ESD protection chip.</li>
+      <li class="aside" data-step="2">The connector has two D+ and two D− pins. Join each pair.</li>
+    </ul>
+  </div>
+  <svg class="sc schem" style="top:520px" viewBox="0 0 820 230" aria-hidden="true" id="sc6"></svg>
+  <div class="u1host" data-build="6"></div>
+  <aside class="notes">One shared resistor across both CC pins is the Raspberry Pi 4 mistake: some chargers then refuse to give 5 V. The F446 has the USB pull-up built in, so D+ and D− connect straight to the pins. USB also needs the crystal, because the internal RC oscillator isn't accurate enough.</aside>
+</section>
+
+<!-- 19 Step 7 signs of life -->
+<section class="slide" data-title="Step 7: Signs of life" data-part="3 Build" data-steps="3">
+  <div class="content">
+    <h2><span class="num">7</span>Signs of life</h2>
+    <ul class="points">
+      <li data-step="1">An LED with a 1 kΩ resistor on pin <span class="pin">21</span> (PA5).</li>
+      <li data-step="2">A button to GND on pin <span class="pin">2</span> (PC13). Turn on the internal pull-up in firmware.</li>
+      <li data-step="3">A 3-pin UART header on pins <span class="pin">16, 17</span> (PA2 TX, PA3 RX) for a USB-serial adapter.</li>
+      <li class="aside">These are the same pins the Nucleo-F446RE uses, so its example code runs unchanged.</li>
+    </ul>
+  </div>
+  <svg class="sc schem" style="top:540px" viewBox="0 0 820 200" aria-hidden="true" id="sc7"></svg>
+  <div class="u1host" data-build="7"></div>
+  <aside class="notes">The first firmware for any new board is a blinking LED, then a hello message over the UART. Matching the Nucleo's pins means people can practice on a Nucleo while the boards are being made, then load the same code on ours.</aside>
+</section>
+
+<!-- 20 Check -->
+<section class="slide" data-title="Check the schematic" data-part="3 Build" data-steps="2">
+  <div class="content">
+    <h2>Check before Convert to PCB</h2>
+    <ul class="points">
+      <li>Put a No Connect Flag on every pin you're leaving empty for now.</li>
+      <li><kbd>Ctrl</kbd><span class="plus">+</span><kbd>D</kbd> opens the Design manager. Fix every error in its Nets folder. Click its refresh icon after each fix; it doesn't refresh by itself.</li>
+      <li><kbd>Alt</kbd><span class="plus">+</span><kbd>F</kbd> opens the Footprint manager: every part needs a footprint.</li>
+      <li>Then click <b>Convert to PCB</b> on the toolbar. Later edits go across with <b>Update PCB</b>.</li>
+    </ul>
+  </div>
+  <div class="dm">
+    <div class="h">Design Manager <span>Nets</span></div>
+    <div class="row"><span class="ic f"></span>Components (31)</div>
+    <div class="row"><span class="ic f"></span>Nets (24)</div>
+    <div class="row sub bad"><span class="ic e"></span>PC0: pin not connected</div>
+    <div class="row sub bad"><span class="ic e"></span>+3V3 / 3V3: two names, two nets</div>
+    <div class="row sub bad"><span class="ic e"></span>BOOT0: only one pin on this net</div>
+    <div class="row sub good"><span class="ic ok"></span>No errors after refresh</div>
+    <div class="row"><span class="ic f"></span>Net Pads</div>
+  </div>
+  <aside class="notes">The Design manager is EasyEDA's check. The three errors shown are typical: an unused pin with no flag, a net name typo, and a label that only connects to one thing, usually because the other end has a slightly different name. Click to show it clean. The rows are an illustration; your counts will differ.</aside>
+</section>
+
+<!-- 21 Layout priorities -->
+<section class="slide dark" data-title="Layout priorities" data-part="3 Build" data-steps="3">
+  <div class="content">
+    <h2>On the PCB: what goes where</h2>
+    <ul class="points">
+      <li data-step="1">Each 100 nF right at its VDD and VSS pin pair. The 4.7 µF on VCAP right at pin 30.</li>
+      <li data-step="2">The crystal and its capacitors tight against pins 5 and 6, with nothing routed underneath.</li>
+      <li data-step="3">USB-C and the SWD header on the board edge, on the side nearest their pins.</li>
+      <li class="aside">The real chip numbers pins counter-clockwise from the dot: 1–16 down the left side.</li>
+    </ul>
+  </div>
+  <div class="lay"><svg viewBox="0 0 760 640" aria-hidden="true" id="laySvg"></svg></div>
+  <aside class="notes">This is where the symbol and the real chip differ: the symbol has 32 pins a side, the package has 16 a side. Look at where the key pins actually sit. The power pairs are at the four corners, the crystal pins on the upper left, USB and SWD on the upper right. That decides where the connectors go.</aside>
+</section>
+
+<!-- 22 Tasks -->
+<section class="slide" data-title="Pick a block" data-part="4 Start">
+  <div class="content wide"><h2>Pick a block to start on</h2></div>
+  <div class="tasks">
+    <div class="task"><h3><span class="st">1</span>Power and decoupling</h3><div class="pins">Steps 1–2 · pins 1, 12, 13, 18, 19, 30, 31, 32, 47, 48, 63, 64</div><p><b>Done when</b> every power pin has its flag and capacitor, and VCAP has its 4.7 µF.</p><div class="own">Owner<i></i></div></div>
+    <div class="task"><h3><span class="st">2</span>Reset, boot and debug</h3><div class="pins">Steps 3 and 5 · pins 7, 46, 49, 60</div><p><b>Done when</b> the SWD header is wired with its pin names, and BOOT0 is pulled low.</p><div class="own">Owner<i></i></div></div>
+    <div class="task"><h3><span class="st">3</span>Crystals</h3><div class="pins">Step 4 · pins 3, 4, 5, 6</div><p><b>Done when</b> both crystals pass the start-up check and the load capacitors are sized.</p><div class="own">Owner<i></i></div></div>
+    <div class="task"><h3><span class="st">4</span>USB-C and 3.3 V</h3><div class="pins">Step 6 · pins 44, 45</div><p><b>Done when</b> the regulator has its datasheet capacitors, both CC resistors and ESD protection are in.</p><div class="own">Owner<i></i></div></div>
+    <div class="task"><h3><span class="st">5</span>Signs of life</h3><div class="pins">Step 7 · pins 2, 16, 17, 21</div><p><b>Done when</b> the LED, button and UART header match the Nucleo pins.</p><div class="own">Owner<i></i></div></div>
+    <div class="task"><h3><span class="st">6</span>Pin plan in CubeMX</h3><div class="pins">The 38 pins still free</div><p><b>Done when</b> the project's peripherals (motor PWM, IMU, Quad-SPI, audio) have pins with no conflicts.</p><div class="own">Owner<i></i></div></div>
+  </div>
+  <aside class="notes">Six blocks, six owners. Blocks 1 to 5 can start right now using the build sheet. Block 6 needs a laptop with STM32CubeMX and a decision on what the board actually does; it's a good one for whoever is leading the project. 38 pins: the 42 free I/O minus the four used in block 5.</aside>
+</section>
+
+<!-- 23 Sheets -->
+<section class="slide" data-title="Work on separate sheets" data-part="4 Start" data-steps="1">
+  <div class="content wide"><h2>One block per sheet, joined by name</h2></div>
+  <div class="agree">Click <b>+</b> next to the sheet tab to add a sheet. In EasyEDA every net is global, so a label on one sheet connects to the same label on every other sheet. Agree the names first:
+    <div class="nl"><span class="net p">+3V3</span><span class="net p">VBUS</span><span class="net p">VDDA</span><span class="net g">GND</span><span class="net c">VCAP</span><span class="net c">NRST</span><span class="net c">BOOT0</span><span class="net k">OSC_IN</span><span class="net k">OSC_OUT</span><span class="net d">SWDIO</span><span class="net d">SWCLK</span><span class="net d">USB_DM</span><span class="net d">USB_DP</span><span class="net s">LED</span><span class="net s">UART_TX</span><span class="net s">UART_RX</span></div>
+  </div>
+  <div class="sheets3"><svg viewBox="0 0 1410 380" aria-hidden="true" id="sheetsSvg" class="schem"></svg></div>
+  <aside class="notes">This is how we split the work. U1 lives on Sheet_1 with a label on every pin. Each block lives on its own sheet with matching labels. When we convert to PCB, all sheets merge into one board. The list of names is the contract between sheets: copy it exactly.</aside>
+</section>
+
+<!-- 24 FAQ -->
+<section class="slide" data-title="Questions" data-part="4 Start">
+  <div class="content wide"><h2>Questions people usually ask</h2></div>
+  <div class="faq">
+    <div><b>Do we really need the 8 MHz crystal?</b><span>The internal 16 MHz oscillator is about 1% accurate. Fine for blinking and UART, not for USB.</span></div>
+    <div><b>Why 64 pins but only 50 I/O?</b><span>14 pins are power, ground, VCAP, NRST and BOOT0.</span></div>
+    <div><b>Why is BOOT0 pulled to GND?</b><span>So the chip runs your program from flash at power-up. Pulled high, it starts ST's built-in bootloader instead.</span></div>
+    <div><b>What happens if VCAP goes to 3.3 V?</b><span>It pushes 3.3 V into the 1.2 V core regulator's output. The chip won't run and can be damaged.</span></div>
+    <div><b>What do we program it with?</b><span>An ST-LINK on the SWD header. The one built into a Nucleo board works too.</span></div>
+    <div><b>Why does the Design manager show errors?</b><span>Usually an unused pin with no No Connect Flag, or two net names that almost match.</span></div>
+    <div><b>Can we skip USB?</b><span>Yes. Feed 3.3 V into a header and program over SWD. You lose the 5 V input and USB data.</span></div>
+    <div><b>Where do the motor and sensor pins go?</b><span>Decide in CubeMX first, then label those pins on the schematic.</span></div>
+  </div>
+  <aside class="notes">Leave this up while people start working. If a question comes up that isn't here, write it down; it probably belongs on this slide next time.</aside>
+</section>
+
+<!-- 25 Resources -->
+<section class="slide" data-title="Resources" data-part="4 Start">
+  <div class="content wide">
+    <h2>Keep these open while you work</h2>
+    <ul class="res">
+      <li><a href="F446-Build-Sheet.pdf" download>F446 build sheet (PDF)</a>Every core pin and what it connects to, plus the Standard shortcuts.</li>
+      <li><a href="mcu-parts.html">Picking parts for a custom STM32 board</a>The deeper talk, with the crystal calculator on slide 17.</li>
+      <li><a href="STM32-Parts-Worksheet.pdf" download>Parts worksheet (PDF)</a>Pin budget, parts list and crystal math to fill in.</li>
+      <li><a href="https://docs.easyeda.com/en/Schematic/Wiring-Tools/" target="_blank" rel="noopener">EasyEDA Standard: Wiring Tools</a>Wires, net labels, flags and No Connect.</li>
+      <li><a href="https://docs.easyeda.com/en/Introduction/Shortcut-Keys/" target="_blank" rel="noopener">EasyEDA Standard: shortcut keys</a>The full official list.</li>
+      <li><a href="https://www.st.com/resource/en/application_note/an4488-getting-started-with-stm32f4xxxx-mcu-hardware-development-stmicroelectronics.pdf" target="_blank" rel="noopener">ST AN4488: STM32F4 hardware guide</a>The source for the power, reset and boot values.</li>
+      <li><a href="https://www.st.com/en/microcontrollers-microprocessors/stm32f446re.html" target="_blank" rel="noopener">STM32F446RE product page</a>Datasheet and reference manual.</li>
+      <li><a href="https://www.st.com/en/development-tools/stm32cubemx.html" target="_blank" rel="noopener">STM32CubeMX</a>Pin planning and the clock tree.</li>
+    </ul>
+  </div>
+  <aside class="notes">The build sheet is the one to print: one per person working on the schematic.</aside>
+</section>
+
+</div></div>
+
+<div id="notes"><h5></h5><div class="body"></div></div>
+<div id="help"><kbd>→</kbd> <kbd>Space</kbd> next &nbsp; <kbd>←</kbd> back &nbsp; <kbd>N</kbd> notes &nbsp; <kbd>F</kbd> full screen &nbsp; <kbd>Home</kbd> <kbd>End</kbd> first and last</div>
+<nav id="navbtns" aria-label="Slide navigation"><button id="prev" aria-label="Previous">‹</button><button id="next" aria-label="Next">›</button><button id="helpbtn" aria-label="Keyboard help">?</button></nav>
+
+<script>
+(function(){
+"use strict";
+const deck=document.getElementById('deck');
+const slides=[...deck.querySelectorAll('.slide')];
+const REDUCE=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function fit(){const s=Math.min(innerWidth/1600,innerHeight/900);deck.style.transform='scale('+s+')';}
+addEventListener('resize',fit);fit();
+
+/* frame + title block */
+function frameSVG(){
+  let t='';
+  for(let i=0;i<8;i++){const x=44+189*(i+.5);t+=`<text x="${x}" y="34">${i+1}</text><text x="${x}" y="866">${i+1}</text>`;
+    if(i){const xl=44+189*i;t+=`<line x1="${xl}" y1="24" x2="${xl}" y2="44"/><line x1="${xl}" y1="856" x2="${xl}" y2="876"/>`;}}
+  const L='ABCD';
+  for(let j=0;j<4;j++){const y=44+203*(j+.5);t+=`<text x="34" y="${y}">${L[j]}</text><text x="1566" y="${y}">${L[j]}</text>`;
+    if(j){const yl=44+203*j;t+=`<line x1="24" y1="${yl}" x2="44" y2="${yl}"/><line x1="1556" y1="${yl}" x2="1576" y2="${yl}"/>`;}}
+  return `<svg class="frame" viewBox="0 0 1600 900" aria-hidden="true"><rect class="outer" x="24" y="24" width="1552" height="852"/><rect x="44" y="44" width="1512" height="812"/>${t}</svg>`;
+}
+slides.forEach((s,i)=>{
+  s.insertAdjacentHTML('afterbegin',frameSVG());
+  s.insertAdjacentHTML('beforeend',`<div class="tblock" aria-hidden="true"><div class="tb-course">STM32F446 board: from the basics up<span>Rev A</span></div><div class="tb-title"><span>Title</span><b>${s.dataset.title}</b></div><div><span>Part</span><b>${s.dataset.part}</b></div><div><span>Sheet</span><b>${i+1} of ${slides.length}</b></div></div>`);
+});
+
+/* ================= U1 symbol (matches the EasyEDA LCSC symbol) ================= */
+const U1L=[[1,'VBAT'],[2,'PC13'],[3,'PC14-OSC32_IN'],[4,'PC15-OSC32_OUT'],[5,'PH0-OSC_IN'],[6,'PH1-OSC_OUT'],[7,'NRST'],[8,'PC0'],[9,'PC1'],[10,'PC2'],[11,'PC3'],[12,'VSSA/VREF-'],[13,'VDDA/VREF+'],[14,'PA0'],[15,'PA1'],[16,'PA2'],[17,'PA3'],[18,'VSS'],[19,'VDD'],[20,'PA4'],[21,'PA5'],[22,'PA6'],[23,'PA7'],[24,'PC4'],[25,'PC5'],[26,'PB0'],[27,'PB1'],[28,'PB2'],[29,'PB10'],[30,'VCAP_1'],[31,'VSS'],[32,'VDD']];
+const U1R=[[64,'VDD'],[63,'VSS'],[62,'PB9'],[61,'PB8'],[60,'BOOT0'],[59,'PB7'],[58,'PB6'],[57,'PB5'],[56,'PB4'],[55,'PB3'],[54,'PD2'],[53,'PC12'],[52,'PC11'],[51,'PC10'],[50,'PA15'],[49,'PA14'],[48,'VDD'],[47,'VSS'],[46,'PA13'],[45,'PA12'],[44,'PA11'],[43,'PA10'],[42,'PA9'],[41,'PA8'],[40,'PC9'],[39,'PC8'],[38,'PC7'],[37,'PC6'],[36,'PB15'],[35,'PB14'],[34,'PB13'],[33,'PB12']];
+const KIND={p:['#C62828','#FBE3E1','#9B1C1C'],g:['#17212B','#E3E7EA','#17212B'],c:['#8B3FB5','#EEE2F5','#5B2180'],k:['#B26B00','#FCEBD0','#8A5300'],d:['#0F7F73','#D8F0EC','#0B5E55'],s:['#1D5DBF','#DCE6F4','#123D7E'],f:['#2F9E5C','#DDF1E5','#1E6E3F'],done:['#9AA6B1','#ECEFF2','#5F6B77']};
+const nameCls=n=>/^VDD/.test(n)?'pwr':/^VSS/.test(n)?'gnd':'io';
+function pillW(t){return Math.round(t.length*7.4+14);}
+function u1SVG(o){
+  const {x,y,w,p}=o,h=p*33,st=20,ld=26,tags=o.tags||{};
+  let base='',over='';
+  const rows=[...U1L.map((r,i)=>[r[0],r[1],'L',i]),...U1R.map((r,i)=>[r[0],r[1],'R',i])];
+  rows.forEach(([num,name,side,i],k)=>{
+    const py=y+p*(i+1),L=side==='L';
+    const x0=L?x-st:x+w, x1=L?x:x+w+st;
+    const dly=o.anim?`style="animation-delay:${(0.2+(L?i:i+0.5)*0.03).toFixed(2)}s"`:'';
+    base+=`<g class="pinrow" ${dly}><line class="stub" x1="${x0}" y1="${py}" x2="${x1}" y2="${py}"/>`+
+      `<text class="pnum" x="${L?x-3:x+w+3}" y="${py-3}" text-anchor="${L?'end':'start'}">${num}</text>`+
+      `<text class="pname ${nameCls(name)}" x="${L?x+5:x+w-5}" y="${py+4.5}" text-anchor="${L?'start':'end'}">${name}</text></g>`;
+    const t=tags[num];if(!t)return;
+    const [label,kind,step]=t;const K=KIND[kind];
+    let g=`<g class="tg t${step||0}">`;
+    g+=`<rect x="${x+1}" y="${py-p/2+1}" width="${w-2}" height="${p-2}" fill="${K[1]}" opacity=".85"/>`;
+    g+=`<text class="pname" x="${L?x+5:x+w-5}" y="${py+4.5}" text-anchor="${L?'start':'end'}" fill="${K[2]}">${name}</text>`;
+    g+=`<line class="lead" x1="${x0}" y1="${py}" x2="${x1}" y2="${py}" stroke="${K[0]}"/>`;
+    if(label){
+      const pw=pillW(label),lx=L?x-st-ld:x+w+st+ld;
+      g+=`<line class="lead" x1="${L?x-st:x+w+st}" y1="${py}" x2="${lx}" y2="${py}" stroke="${K[0]}"/>`;
+      const rx=L?lx-pw:lx;
+      g+=`<rect x="${rx}" y="${py-8.5}" width="${pw}" height="17" rx="3" fill="${K[1]}" stroke="${K[0]}" stroke-width="1.4"/><text x="${rx+pw/2}" y="${py+4.5}" text-anchor="middle" fill="${K[2]}">${label}</text>`;
+    }
+    over+=g+'</g>';
+  });
+  return `<g class="u1${o.anim?' u1-title':''}"><text class="u1-des" x="${x+w/2}" y="${y-24}">U1</text><text class="u1-pn" x="${x+w/2}" y="${y-7}">STM32F446RET6</text>`+
+    `<rect class="u1-body" x="${x}" y="${y}" width="${w}" height="${h}"/><circle class="dot1" cx="${x+7}" cy="${y+7}" r="3"/>${over}${base}</g>`;
+}
+/* build steps: pin -> [net label, kind, sub-step] */
+const BUILD={
+  1:{1:['+3V3','p',1],19:['+3V3','p',1],32:['+3V3','p',1],48:['+3V3','p',1],64:['+3V3','p',1],18:['GND','g',2],31:['GND','g',2],47:['GND','g',2],63:['GND','g',2]},
+  2:{13:['VDDA','p',1],12:['GND','g',1],30:['VCAP','c',2]},
+  3:{7:['NRST','c',1],60:['BOOT0','c',2]},
+  4:{5:['OSC_IN','k',1],6:['OSC_OUT','k',1],3:['OSC32_IN','k',2],4:['OSC32_OUT','k',2]},
+  5:{46:['SWDIO','d',1],49:['SWCLK','d',1],55:['SWO','d',2]},
+  6:{44:['USB_DM','d',2],45:['USB_DP','d',2]},
+  7:{21:['LED','s',1],2:['BUTTON','s',2],16:['UART_TX','s',3],17:['UART_RX','s',3]}
+};
+const GEO={x:1100,y:118,w:186,p:19};
+document.querySelectorAll('.u1host').forEach(h=>{
+  let tags={},geo=GEO,anim=false;
+  if(h.dataset.build){const n=+h.dataset.build;
+    for(let k=1;k<n;k++)for(const pin in BUILD[k])tags[pin]=[BUILD[k][pin][0],'done',0];
+    for(const pin in BUILD[n])tags[pin]=BUILD[n][pin];}
+  else if(h.dataset.u1==='meet'){
+    const grp=[[1,'p',[1,12,13,18,19,31,32,47,48,63,64]],[2,'c',[7,30,60]],[3,'k',[3,4,5,6]],[4,'d',[44,45,46,49]]];
+    const used=new Set();grp.forEach(([st,k,pins])=>pins.forEach(pn=>{tags[pn]=['',k,st];used.add(pn);}));
+    for(let pn=1;pn<=64;pn++)if(!used.has(pn))tags[pn]=['','f',5];
+    [12,18,31,47,63].forEach(pn=>tags[pn]=['','g',1]);
+  }
+  else if(h.dataset.u1==='title'){geo={x:1180,y:150,w:186,p:18};anim=true;
+    tags={1:['+3V3','p',0],19:['+3V3','p',0],32:['+3V3','p',0],48:['+3V3','p',0],64:['+3V3','p',0],18:['GND','g',0],31:['GND','g',0],47:['GND','g',0],63:['GND','g',0],5:['OSC_IN','k',0],6:['OSC_OUT','k',0],46:['SWDIO','d',0],49:['SWCLK','d',0]};}
+  h.innerHTML=`<svg viewBox="0 0 1600 900" aria-hidden="true">${u1SVG(Object.assign({},geo,{tags,anim}))}</svg>`;
+});
+
+/* ================= schematic drawing helpers ================= */
+const KC=k=>KIND[k];
+const pill=(x,y,t,k,anchor)=>{const pw=pillW(t),K=KC(k),rx=anchor==='r'?x-pw:anchor==='c'?x-pw/2:x;return {w:pw,s:`<g class="pl"><rect x="${rx}" y="${y-9}" width="${pw}" height="18" rx="3" fill="${K[1]}" stroke="${K[0]}" stroke-width="1.4"/><text x="${rx+pw/2}" y="${y+4.5}" text-anchor="middle" fill="${K[2]}" style="fill:${K[2]}">${t}</text></g>`,l:rx,r:rx+pw};};
+const W=d=>`<path class="w" d="${d}"/>`;
+const gnd=(x,y)=>`<g class="k"><path d="M${x-12} ${y} H${x+12} M${x-8} ${y+5} H${x+8} M${x-4} ${y+10} H${x+4}"/></g>`;
+const capV=(x,y1,y2,n,v)=>{const m=(y1+y2)/2;return `<g class="k"><path d="M${x} ${y1} V${m-4} M${x-13} ${m-4} H${x+13} M${x-13} ${m+4} H${x+13} M${x} ${m+4} V${y2}"/></g><text x="${x+17}" y="${m-3}">${n}</text><text class="v" x="${x+17}" y="${m+14}">${v}</text>`;};
+const resV=(x,y1,y2,n,v)=>{const m=(y1+y2)/2;return `<g class="k"><path d="M${x} ${y1} V${m-17} M${x} ${m+17} V${y2}"/><rect class="fill" x="${x-7}" y="${m-17}" width="14" height="34"/></g><text x="${x+14}" y="${m-3}">${n}</text><text class="v" x="${x+14}" y="${m+14}">${v}</text>`;};
+const resH=(x1,x2,y,n,v)=>{const m=(x1+x2)/2;return `<g class="k"><path d="M${x1} ${y} H${m-17} M${m+17} ${y} H${x2}"/><rect class="fill" x="${m-17}" y="${y-7}" width="34" height="14"/></g><text x="${m}" y="${y-14}" text-anchor="middle">${n}</text><text class="v" x="${m}" y="${y+26}" text-anchor="middle">${v}</text>`;};
+const xtalH=(x1,x2,y,n,v)=>{const m=(x1+x2)/2;return `<g class="k"><path d="M${x1} ${y} H${m-13} M${m-13} ${y-12} V${y+12} M${m+13} ${y-12} V${y+12} M${m+13} ${y} H${x2}"/><rect class="fill" x="${m-8}" y="${y-9}" width="16" height="18"/></g><text x="${m}" y="${y-20}" text-anchor="middle">${n} <tspan class="v" style="fill:#123D7E">${v}</tspan></text>`;};
+const fbH=(x1,x2,y,n)=>{const m=(x1+x2)/2;return `<g class="k"><path d="M${x1} ${y} H${m-15} M${m+15} ${y} H${x2}"/><rect class="solid" x="${m-15}" y="${y-6}" width="30" height="12" rx="2"/></g><text x="${m}" y="${y-14}" text-anchor="middle">${n}</text>`;};
+const ledV=(x,y1,y2,n)=>{const m=(y1+y2)/2;return `<g class="k"><path d="M${x} ${y1} V${m-9} M${x-11} ${m+9} H${x+11} M${x} ${m+9} V${y2} M${x+14} ${m-6} l9 -7 M${x+16} ${m+4} l9 -7"/><path class="fill" d="M${x-11} ${m-9} H${x+11} L${x} ${m+9} Z"/></g><text x="${x+30}" y="${m+5}">${n}</text>`;};
+const btnV=(x,y1,y2,n)=>{const m=(y1+y2)/2;return `<g class="k"><path d="M${x} ${y1} V${m-12} M${x} ${m+12} V${y2} M${x-12} ${m-16} V${m+16} M${x-12} ${m} H${x-22}"/><circle class="fill" cx="${x}" cy="${m-12}" r="3"/><circle class="fill" cx="${x}" cy="${m+12}" r="3"/></g><text x="${x+12}" y="${m+5}">${n}</text>`;};
+const box=(x,y,w,h,title)=>`<g class="k"><rect class="fill" x="${x}" y="${y}" width="${w}" height="${h}" rx="3"/></g><text class="box" x="${x+w/2}" y="${y-8}" text-anchor="middle">${title}</text>`;
+const T=(x,y,s,cls,anchor)=>`<text ${cls?`class="${cls}"`:''} x="${x}" y="${y}" ${anchor?`text-anchor="${anchor}"`:''}>${s}</text>`;
+const G=(n,s)=>`<g class="gs g${n}">${s}</g>`;
+const set=(id,s)=>{const e=document.getElementById(id);if(e)e.innerHTML=s;};
+
+/* step 1: power rail */
+(function(){
+  const p=pill(10,40,'+3V3','p','l');let s=p.s+W(`M${p.r} 40 H660`);
+  const caps=[[110,'C1','100 nF','pin 19'],[205,'C2','100 nF','pin 32'],[300,'C3','100 nF','pin 48'],[395,'C4','100 nF','pin 64'],[490,'C5','100 nF','pin 1'],[600,'C6','4.7 µF','bulk']];
+  caps.forEach(c=>{s+=capV(c[0],40,140,c[1],c[2])+T(c[0],196,c[3],'n','middle');});
+  s+=W('M110 140 H660 V150')+gnd(660,152)+T(676,170,'GND','n');
+  set('sc1',s);
+})();
+/* step 2 */
+(function(){
+  let a='';const p=pill(10,40,'+3V3','p','l');a+=p.s+fbH(p.r,190,40,'FB1 ferrite bead')+W('M190 40 H380');
+  const q=pill(380,40,'VDDA','p','l');a+=q.s;
+  a+=capV(250,40,140,'C7','1 µF')+capV(330,40,140,'C8','100 nF')+W('M250 140 H330 M290 140 V150')+gnd(290,152);
+  let b='';const r=pill(600,40,'VCAP','c','c');b+=r.s+W('M600 49 V60')+capV(600,60,150,'C9','4.7 µF')+gnd(600,152)+T(628,190,'low ESR, under 1 Ω','n');
+  set('sc2',G(1,a)+G(2,b));
+})();
+/* step 3 */
+(function(){
+  let a='';const p=pill(10,40,'NRST','c','l');a+=p.s+W(`M${p.r} 40 H280`)+capV(150,40,140,'C10','100 nF')+gnd(150,142)+btnV(280,40,140,'SW1')+gnd(280,142)+T(300,176,'reset button (optional)','n');
+  let b='';const q=pill(460,40,'BOOT0','c','l');b+=q.s+W(`M${q.r} 40 H600`)+resV(600,40,140,'R1','10 kΩ')+gnd(600,142)+T(470,176,'pulled low: runs your program','n');
+  set('sc3',G(1,a)+G(2,b));
+})();
+/* step 4 */
+(function(){
+  const row=(y,inl,outl,n,v,c1,c2,note)=>{const a=pill(10,y,inl,'k','l');let s=a.s+W(`M${a.r} ${y} H200`)+xtalH(200,330,y,n,v)+W(`M330 ${y} H410`);
+    const b=pill(410,y,outl,'k','l');s+=b.s+capV(200,y,y+80,c1,'')+capV(330,y,y+80,c2,'')+gnd(200,y+82)+gnd(330,y+82)+T(b.r+20,y+5,note,'n');return s;};
+  set('sc4',G(1,row(40,'OSC_IN','OSC_OUT','Y1','8 MHz','C11','C12','2 × (C<tspan baseline-shift="sub" font-size="11">L</tspan> − C<tspan baseline-shift="sub" font-size="11">stray</tspan>) each'))+G(2,row(170,'OSC32_IN','OSC32_OUT','Y2','32.768 kHz','C13','C14','optional, for the RTC')));
+})();
+/* step 5: SWD header */
+(function(){
+  const pins=[['+3V3','p'],['SWDIO','d'],['SWCLK','d'],['NRST','c'],['GND','g']];
+  let s=box(430,14,110,200,'J2  SWD');
+  pins.forEach((pp,i)=>{const y=40+i*38;const q=pill(380,y,pp[0],pp[1],'r');s+=q.s+W(`M380 ${y} H430`)+T(452,y+5,`${i+1}  ${pp[0]}`);});
+  s+=T(570,90,'to the ST-LINK','n')+`<g class="k"><path d="M560 110 H660 M650 102 L662 110 L650 118"/></g>`;
+  const sw=pill(380,232,'SWO','d','r');
+  set('sc5',G(0,s)+G(2,`<g class="k"><rect class="fill" x="430" y="214" width="110" height="36" rx="3"/></g>`+sw.s+W('M380 232 H430')+T(452,237,'6  SWO')));
+})();
+/* step 6: USB-C */
+(function(){
+  let s=box(20,14,120,214,'J1  USB-C');
+  const rows=[['VBUS',36],['D−',96],['D+',132],['CC1',170],['CC2',204]];
+  rows.forEach(r=>{s+=T(132,r[1]+5,r[0],'','end');});
+  let a=W('M140 36 H300')+`<g class="k"><rect class="fill" x="300" y="14" width="140" height="56" rx="3"/></g>`+T(370,40,'3.3 V regulator','','middle')+T(370,60,'U2','n','middle');
+  const o=pill(470,36,'+3V3','p','l');a+=W('M440 36 H470')+o.s+W('M370 70 V84')+gnd(370,86);
+  a+=resH(140,240,170,'','')+resH(140,240,204,'','')+W('M240 170 H270 V214 M240 204 H270')+gnd(270,216)+T(250,250,'R2, R3: 5.1 kΩ each','n');
+  let b=W('M140 96 H460 M140 132 H460')+`<g class="k"><rect class="fill" x="200" y="84" width="60" height="60" rx="3"/></g>`+T(230,119,'ESD','','middle');
+  const m=pill(460,96,'USB_DM','d','l'),pp=pill(460,132,'USB_DP','d','l');b+=m.s+pp.s;
+  set('sc6',G(0,s)+G(1,a)+G(2,b));
+})();
+/* step 7 */
+(function(){
+  let a='';const p=pill(10,40,'LED','s','l');a+=p.s+resH(p.r,170,40,'R4','1 kΩ')+W('M170 40 H220')+ledV(220,40,130,'D1')+gnd(220,132);
+  let b='';const q=pill(300,40,'BUTTON','s','l');b+=q.s+W(`M${q.r} 40 H430`)+btnV(430,40,130,'SW2')+gnd(430,132);
+  let c=box(640,14,120,130,'J3  UART');const rows=[['UART_TX','s'],['UART_RX','s'],['GND','g']];
+  rows.forEach((r,i)=>{const y=44+i*38;const z=pill(600,y,r[0],r[1],'r');c+=z.s+W(`M600 ${y} H640`)+T(660,y+5,['TX','RX','GND'][i]);});
+  set('sc7',G(1,a)+G(2,b)+G(3,c));
+})();
+
+/* ================= other drawings ================= */
+/* schematic vs PCB */
+(function(){
+  let s=pill(20,60,'+3V3','p','l').s+W('M74 60 H140')+resH(140,260,60,'R1','1 kΩ')+W('M260 60 H340')+ledV(340,60,170,'D1')+gnd(340,172);
+  s+=pill(420,60,'+3V3','p','l').s+W('M474 60 H520')+capV(520,60,170,'C1','100 nF')+gnd(520,172);
+  set('svpSch',s);
+  const pad=(x,y,w,h)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#E5483B"/>`;
+  let p=`<rect x="20" y="20" width="560" height="210" fill="none" stroke="#DE57DE" stroke-width="3"/>`;
+  p+=pad(120,96,26,30)+pad(176,96,26,30)+`<rect x="110" y="86" width="102" height="50" fill="none" stroke="#F2C94C" stroke-width="2"/><text x="161" y="78" fill="#F2C94C" text-anchor="middle" style="font:600 16px var(--f-key)">R1</text>`;
+  p+=pad(300,130,30,22)+pad(300,180,30,22)+`<rect x="290" y="120" width="50" height="92" fill="none" stroke="#F2C94C" stroke-width="2"/><path d="M290 212 H340" stroke="#F2C94C" stroke-width="5"/><text x="356" y="172" fill="#F2C94C" style="font:600 16px var(--f-key)">D1</text>`;
+  p+=pad(450,100,26,30)+pad(506,100,26,30)+`<rect x="440" y="90" width="102" height="50" fill="none" stroke="#F2C94C" stroke-width="2"/><text x="491" y="82" fill="#F2C94C" text-anchor="middle" style="font:600 16px var(--f-key)">C1</text>`;
+  p+=`<path d="M189 111 L315 141 M463 115 L133 111" stroke="#CBD4DC" stroke-width="1.5"/><path d="M315 191 L519 115" stroke="#CBD4DC" stroke-width="1.5"/>`;
+  set('svpPcb',p);
+})();
+
+
+/* screen mini symbol + palettes */
+(function(){
+  const m=document.getElementById('scrMini');let s='';for(let i=0;i<16;i++){s+=`<i style="left:-10px;top:${10+i*17}px"></i><i style="right:-10px;top:${10+i*17}px"></i>`;}m.innerHTML=s;
+  const ic=(x,y,k)=>{const o=`fill="none" stroke="#5B6773" stroke-width="1.6" stroke-linecap="round"`;
+    const d={wire:`<path ${o} d="M${x} ${y+2} H${x+8} V${y+14} H${x+16}"/><circle cx="${x}" cy="${y+2}" r="2" fill="#5B6773"/><circle cx="${x+16}" cy="${y+14}" r="2" fill="#5B6773"/>`,
+      bus:`<path ${o} stroke-width="3" d="M${x} ${y+2} H${x+8} V${y+14} H${x+16}"/>`,entry:`<path ${o} d="M${x+2} ${y+2} L${x+16} ${y+16}"/>`,
+      label:`<rect ${o} x="${x}" y="${y}" width="16" height="12"/><text x="${x+8}" y="${y+10}" fill="#5B6773" style="font:600 8px var(--f-key)" text-anchor="middle">N</text>`,
+      gnd:`<path ${o} d="M${x+8} ${y} V${y+7} M${x} ${y+7} H${x+16} M${x+3} ${y+11} H${x+13} M${x+6} ${y+15} H${x+10}"/>`,
+      agnd:`<path ${o} d="M${x+8} ${y} V${y+5} M${x} ${y+5} H${x+16} L${x+8} ${y+15} Z"/>`,port:`<path ${o} d="M${x} ${y+3} H${x+12} L${x+17} ${y+8} L${x+12} ${y+13} H${x} Z"/>`,
+      vcc:`<text x="${x+8}" y="${y+5}" fill="#5B6773" style="font:600 7px var(--f-key)" text-anchor="middle">VCC</text><path ${o} d="M${x+1} ${y+8} H${x+15} M${x+8} ${y+8} V${y+17}"/>`,
+      p5:`<text x="${x+8}" y="${y+5}" fill="#5B6773" style="font:600 7px var(--f-key)" text-anchor="middle">+5V</text><path ${o} d="M${x+1} ${y+8} H${x+15} M${x+8} ${y+8} V${y+17}"/>`,
+      nc:`<path ${o} d="M${x+2} ${y+2} L${x+14} ${y+14} M${x+14} ${y+2} L${x+2} ${y+14}"/>`,probe:`<path ${o} d="M${x} ${y+16} L${x+14} ${y+2}"/><circle cx="${x+15}" cy="${y+2}" r="2" fill="none" stroke="#5B6773"/>`,
+      pin:`<path ${o} d="M${x} ${y+8} H${x+12}"/><circle cx="${x+14}" cy="${y+8}" r="2" fill="none" stroke="#5B6773"/>`,grp:`<rect ${o} x="${x+2}" y="${y+2}" width="12" height="12"/><path ${o} d="M${x} ${y+5} H${x+3} M${x} ${y+11} H${x+3} M${x+13} ${y+5} H${x+16}"/>`};
+    return d[k];};
+  const r1=['wire','bus','entry','label','gnd','agnd','port'],r2=['vcc','p5','nc','probe','pin','grp'];
+  let w='';r1.forEach((k,i)=>w+=ic(8+i*32,6,k));r2.forEach((k,i)=>w+=ic(8+i*32,34,k));
+  set('scrWt',w);
+  let d='';const dl=['M10 8 h20 v14 h-20z','M48 22 l12 -16 l-4 10 h8 l-12 16','M10 52 q8 -16 18 0 t18 0','M50 56 m-8 0 a8 8 0 1 0 16 0 a8 8 0 1 0 -16 0','M10 94 l20 -8 l-20 -8','M44 80 h16 v16 h-16z','M10 126 l18 -14 l4 4 l-18 14z','M44 112 h16 v16 h-16z','M10 150 h14 l6 8 l-6 8 h-14 l6 -8z','M52 158 m-8 0 a8 8 0 1 0 16 0 a8 8 0 1 0 -16 0','M28 186 a10 10 0 1 1 0 -2 l-8 2 z','M44 178 h18 v14 h-18z'];
+  dl.forEach(p=>d+=`<path d="${p}" fill="none" stroke="#5B6773" stroke-width="1.6" stroke-linejoin="round"/>`);
+  set('scrDt',d);
+  /* big palette with highlights */
+  let b='';const big=(x,y,k)=>`<g transform="translate(${x} ${y}) scale(2.4)">${ic(0,0,k)}</g>`;
+  r1.forEach((k,i)=>b+=big(20+i*70,14,k));r2.forEach((k,i)=>b+=big(20+i*70,84,k));
+  const hlc=(x,y,c)=>`<rect class="hlc ${c}" x="${x-8}" y="${y-8}" width="56" height="58" rx="8"/>`;
+  b+=hlc(20,14,'h1')+hlc(230,14,'h2')+hlc(20,84,'h3')+hlc(300,14,'h3')+hlc(160,84,'h4');
+  set('wtBig',b);
+})();
+
+/* same name same net */
+(function(){
+  let s='';
+  s+=box(30,40,150,110,'U2  regulator')+T(170,104,'OUT','','end')+W('M180 98 H240');const a=pill(240,98,'+3V3','p','l');s+=a.s;
+  s+=box(460,40,150,240,'U1 (part)')+T(470,104,'VDD 19')+T(470,154,'PC0')+T(470,204,'VSS 18');
+  s+=W('M460 98 H400');const b=pill(400,98,'+3V3','p','r');s+=b.s;s+=W('M460 198 H400');const g=pill(400,198,'GND','g','r');s+=g.s;
+  s+=`<g class="k"><path d="M460 148 H430"/></g>`;
+  s+=capV(200,330,430,'C1','100 nF');const c=pill(200,321,'+3V3','p','c');s+=c.s+W('M200 330 V330')+gnd(200,432);
+  s+=`<path class="link" d="M${a.r+4} 98 H${b.l-4}"/><path class="link" d="M200 312 Q200 220 ${a.l+20} 108"/>`;
+  s+=`<text class="cap1" x="250" y="335" style="fill:#123D7E">all three are one net: +3V3</text>`;
+  s+=`<g class="nc"><path d="M422 140 L438 156 M438 140 L422 156" stroke="#D93B2F" stroke-width="3" stroke-linecap="round"/><text x="412" y="153" style="fill:#D93B2F" text-anchor="end">No Connect Flag</text></g>`;
+  set('netsSvg',s);
+})();
+
+/* seven blocks */
+(function(){
+  const cx=705,cy=300;let s=`<rect class="chipb" x="${cx-110}" y="${cy-130}" width="220" height="260" rx="6"/><text x="${cx}" y="${cy-6}" text-anchor="middle" style="font:600 34px var(--f-cond);fill:#17212B">U1</text><text x="${cx}" y="${cy+22}" text-anchor="middle" style="font:600 17px var(--f-key);fill:#44525F">STM32F446RET6</text>`;
+  const B=[[1,'Power and decoupling','VDD, VBAT, VSS',40,30,'#C62828'],[2,'VDDA and VCAP','Analog supply, 1.2 V core',40,215,'#C62828'],[3,'Reset and boot','NRST, BOOT0',40,400,'#8B3FB5'],
+           [4,'Crystals','8 MHz and 32.768 kHz',1050,30,'#B26B00'],[5,'Debug header','SWD on PA13, PA14',1050,215,'#0F7F73'],[6,'USB-C and 3.3 V','Power in, PA11, PA12',1050,400,'#0F7F73'],[7,'Signs of life','LED, button, UART',545,490,'#1D5DBF']];
+  B.forEach((b,i)=>{const [n,t,sub,x,y,c]=b,w=320,h=90,d=(0.25+i*0.22).toFixed(2);
+    const side=n===7?'b':x<cx?'l':'r';let ex,ey,tx,ty;
+    if(side==='l'){ex=x+w;ey=y+h/2;tx=cx-110;ty=Math.min(Math.max(ey,cy-100),cy+100);}
+    else if(side==='r'){ex=x;ey=y+h/2;tx=cx+110;ty=Math.min(Math.max(ey,cy-100),cy+100);}
+    else{ex=cx;ey=y;tx=cx;ty=cy+130;}
+    const path=side==='b'?`M${ex} ${ey} V${ty}`:`M${ex} ${ey} H${(ex+tx)/2} V${ty} H${tx}`;
+    s+=`<path class="ln" pathLength="1" d="${path}" style="animation-delay:${(+d+.1).toFixed(2)}s"/>`;
+    s+=`<g class="blk" style="animation-delay:${d}s"><rect class="bx" x="${x}" y="${y}" width="${w}" height="${h}" rx="8"/><circle cx="${x+40}" cy="${y+45}" r="22" fill="${c}"/><text class="bn" x="${x+40}" y="${y+53}">${n}</text><text class="bt" x="${x+76}" y="${y+40}">${t}</text><text class="bs" x="${x+76}" y="${y+66}">${sub}</text></g>`;});
+  set('blocksSvg',s);
+})();
+
+/* layout drawing: LQFP-64 footprint, pins counter-clockwise from pin 1 */
+(function(){
+  const X=210,Y=150,S=340,N=16,pitch=S/(N+1),pl=26,pw=10;
+  const pos=n=>{const k=n-1,side=Math.floor(k/N),i=k%N,t=pitch*(i+1);
+    if(side===0)return{x:X-pl,y:Y+t-pw/2,w:pl,h:pw,cx:X-pl/2,cy:Y+t,o:X-pl,side};
+    if(side===1)return{x:X+t-pw/2,y:Y+S,w:pw,h:pl,cx:X+t,cy:Y+S+pl/2,o:Y+S+pl,side};
+    if(side===2)return{x:X+S,y:Y+S-t-pw/2,w:pl,h:pw,cx:X+S+pl/2,cy:Y+S-t,o:X+S+pl,side};
+    return{x:X+S-t-pw/2,y:Y-pl,w:pw,h:pl,cx:X+S-t,cy:Y-pl/2,o:Y-pl,side};};
+  const key=new Set([1,5,6,12,13,18,19,30,31,32,44,45,46,47,48,49,63,64]);
+  let s=`<rect class="edge" x="20" y="20" width="720" height="600" rx="6"/>`;
+  for(let n=1;n<=64;n++){const p=pos(n);s+=`<rect class="pad${key.has(n)?' key':''}" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}"/>`;}
+  s+=`<rect class="body" x="${X}" y="${Y}" width="${S}" height="${S}"/><circle cx="${X+20}" cy="${Y+20}" r="7" fill="#F2C94C"/><text x="${X+S/2}" y="${Y+S/2+8}" text-anchor="middle" style="font:600 26px var(--f-key);fill:#E4EAEF">U1</text>`;
+  s+=`<text x="${X+36}" y="${Y+26}">1</text>`;
+  const L=(t,x,y,a)=>`<text x="${x}" y="${y}" text-anchor="${a||'middle'}">${t}</text>`;
+  s+=L('5, 6',X+12,pos(5).cy+14,'start')+L('12, 13',X+12,pos(12).cy+14,'start');
+  s+=L('18, 19',(pos(18).cx+pos(19).cx)/2,Y+S-10)+L('30',pos(30).cx,Y+S-10)+L('31, 32',(pos(31).cx+pos(32).cx)/2+4,Y+S-24);
+  s+=L('44, 45',X+S-12,pos(44).cy+4,'end')+L('46',X+S-12,pos(46).cy+5,'end')+L('47, 48',X+S-12,pos(48).cy+12,'end');
+  s+=L('49',pos(49).cx-10,Y-pl-6,'end')+L('63, 64',(pos(63).cx+pos(64).cx)/2+18,Y+40);
+  const capH=(cx,y,lab)=>`<g class="part"><rect class="p" x="${cx-15}" y="${y}" width="11" height="12"/><rect class="p" x="${cx+4}" y="${y}" width="11" height="12"/><rect class="o" x="${cx-18}" y="${y-3}" width="36" height="18"/></g>${lab?`<text class="s" x="${cx}" y="${y+32}" text-anchor="middle">${lab}</text>`:''}`;
+  const capV=(x,cy,lab,left)=>`<g class="part"><rect class="p" x="${x}" y="${cy-15}" width="12" height="11"/><rect class="p" x="${x}" y="${cy+4}" width="12" height="11"/><rect class="o" x="${x-3}" y="${cy-18}" width="18" height="36"/></g>${lab?`<text class="s" x="${left?x-8:x+22}" y="${cy+5}" ${left?'text-anchor="end"':''}>${lab}</text>`:''}`;
+  /* step 1 */
+  let g1=capH((pos(18).cx+pos(19).cx)/2,Y+S+pl+10,'100 nF')+capH((pos(63).cx+pos(64).cx)/2,Y-pl-28,'')+capV(X+S+pl+10,(pos(47).cy+pos(48).cy)/2,'')+
+    capV(X+S+10,Y+S+pl+6,'')+capV(X-pl-26,(pos(12).cy+pos(13).cy)/2,'1 µF + 100 nF',true)+capV(pos(30).cx-6,Y+S+pl+56,'4.7 µF',true);
+  g1+=`<path class="tr" d="M${pos(31).cx} ${Y+S+pl} V${Y+S+pl+14} H${X+S+10}"/><path class="tr" d="M${pos(30).cx} ${Y+S+pl} V${Y+S+pl+38}"/>`;
+  g1+=`<text x="40" y="604" style="fill:#97A5B2">Decoupling at the four power corners, at VDDA and at VCAP</text>`;
+  /* step 2 */
+  const c5=pos(5).cy,c6=pos(6).cy;let g2=`<g class="part"><rect class="p" x="110" y="${c5-22}" width="16" height="14"/><rect class="p" x="140" y="${c5-22}" width="16" height="14"/><rect class="p" x="110" y="${c6+8}" width="16" height="14"/><rect class="p" x="140" y="${c6+8}" width="16" height="14"/><rect class="o" x="104" y="${c5-28}" width="58" height="${c6-c5+56}"/></g>`;
+  g2+=`<path class="tr" d="M156 ${c5-15} H166 L${X-pl-6} ${c5} H${X-pl}"/><path class="tr" d="M156 ${c6+15} H166 L${X-pl-6} ${c6} H${X-pl}"/>`;
+  g2+=capV(66,c5-14,'')+capV(66,c6+16,'')+`<text class="s" x="133" y="${c5-40}" text-anchor="middle">Y1 8 MHz</text>`;
+  /* step 3 */
+  const u44=pos(44).cy,u45=pos(45).cy;
+  let g3=`<g class="part"><rect class="o" x="676" y="${(u44+u45)/2-52}" width="58" height="104" rx="8"/><text class="s" x="705" y="${(u44+u45)/2-62}" text-anchor="middle">USB-C</text></g>`;
+  g3+=`<path class="tr" d="M${X+S+pl} ${u45} H660 L676 ${u45-4}"/><path class="tr" d="M${X+S+pl} ${u44} H660 L676 ${u44+4}"/>`;
+  g3+=`<g class="part">${[0,1,2,3,4].map(i=>`<circle class="p" cx="${452+i*34}" cy="52" r="10" fill="#E5483B"/>`).join('')}<rect class="o" x="430" y="34" width="180" height="36"/><text class="s" x="520" y="90" text-anchor="middle">SWD header</text></g>`;
+  g3+=`<path class="tr" d="M${pos(49).cx} ${Y-pl} V${Y-pl-20} L${486} 70"/><path class="tr" d="M${X+S+pl} ${pos(46).cy} H640 V100 L520 70"/>`;
+  set('laySvg',s+G(1,g1)+G(2,g2)+G(3,g3));
+})();
+
+/* sheets */
+(function(){
+  const pg=(x,title,labels)=>{let s=`<rect class="pg" x="${x}" y="40" width="420" height="300" rx="4"/><text class="pgt" x="${x+20}" y="78">${title}</text>`;
+    labels.forEach((l,i)=>{const p=pill(x+(l[2]==='r'?400:20),120+i*44,l[0],l[1],l[2]);s+=p.s;});return s;};
+  let s=pg(0,'Sheet_2: Power and USB',[['+3V3','p','r'],['GND','g','r'],['USB_DM','d','r'],['USB_DP','d','r']]);
+  s+=pg(495,'Sheet_1: U1',[['+3V3','p','l'],['GND','g','l'],['USB_DM','d','l'],['USB_DP','d','l']]);
+  s+=pg(990,'Sheet_3: Clocks and debug',[['OSC_IN','k','l'],['OSC_OUT','k','l'],['SWDIO','d','l'],['SWCLK','d','l']]);
+  const s1=pg(495,'',[['OSC_IN','k','r'],['OSC_OUT','k','r'],['SWDIO','d','r'],['SWCLK','d','r']]).replace(/<rect class="pg"[^>]*>|<text class="pgt"[^>]*><\/text>/g,'');
+  s+=s1;
+  for(let i=0;i<4;i++){const y=120+i*44;s+=`<path class="lnk" d="M402 ${y} H513"/><path class="lnk" d="M897 ${y} H1008"/>`;}
+  s+=`<text class="tab" x="0" y="372">*Sheet_1 ⌃  *Sheet_2  *Sheet_3  +</text>`;
+  set('sheetsSvg',s);
+})();
+
+
+
+/* ================= navigation ================= */
+let cur=-1;
+function maxStep(s){const a=[...s.querySelectorAll('[data-step]')].map(e=>+e.dataset.step);return Math.max(+(s.dataset.steps||0),...a,0);}
+function setStep(s,n,anim){
+  if(REDUCE)anim=false;
+  if(!anim)s.classList.add('instant');
+  s.dataset.cur=n;s._step=n;
+  s.querySelectorAll('[data-step]').forEach(e=>e.classList.toggle('shown',+e.dataset.step<=n));
+  for(let i=1;i<=9;i++)s.classList.toggle('s'+i,i<=n);
+  if(!anim){void s.offsetWidth;requestAnimationFrame(()=>requestAnimationFrame(()=>s.classList.remove('instant')));}
+}
+function show(i,n,anim){
+  i=Math.max(0,Math.min(slides.length-1,i));
+  const s=slides[i];
+  if(i!==cur){
+    if(cur>=0){const o=slides[cur];o.classList.remove('active');setTimeout(()=>{if(!o.classList.contains('active'))setStep(o,0,false);},400);}
+    s.classList.add('active');cur=i;setStep(s,0,false);if(n>0)setStep(s,n,false);
+  }else setStep(s,n,anim);
+  history.replaceState(null,'','#'+(i+1)+(n?'.'+n:''));
+  const notes=s.querySelector('.notes');
+  document.querySelector('#notes h5').textContent=`Slide ${i+1} of ${slides.length}: ${s.dataset.title}`;
+  document.querySelector('#notes .body').textContent=notes?notes.textContent.trim():'';
+}
+function next(){const s=slides[cur];if(s._step<maxStep(s))show(cur,s._step+1,true);else if(cur<slides.length-1)show(cur+1,0,true);}
+function prev(){const s=slides[cur];if(s._step>0)show(cur,s._step-1,true);else if(cur>0)show(cur-1,maxStep(slides[cur-1]),false);}
+addEventListener('keydown',e=>{
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  const k=e.key;
+  if(['ArrowRight','ArrowDown','PageDown',' ','Enter'].includes(k)){e.preventDefault();next();}
+  else if(['ArrowLeft','ArrowUp','PageUp','Backspace'].includes(k)){e.preventDefault();prev();}
+  else if(k==='Home')show(0,0,true);
+  else if(k==='End')show(slides.length-1,0,true);
+  else if(k==='n'||k==='N')document.body.classList.toggle('show-notes');
+  else if(k==='f'||k==='F'){if(!document.fullscreenElement)document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();else document.exitFullscreen();}
+  else if(k==='?')document.body.classList.toggle('show-help');
+});
+document.getElementById('next').onclick=e=>{e.stopPropagation();next();};
+document.getElementById('prev').onclick=e=>{e.stopPropagation();prev();};
+document.getElementById('helpbtn').onclick=e=>{e.stopPropagation();document.body.classList.toggle('show-help');};
+deck.addEventListener('click',e=>{if(e.target.closest('a,button'))return;const r=deck.getBoundingClientRect();if(e.clientX<r.left+r.width*0.25)prev();else next();});
+let idle;addEventListener('mousemove',()=>{document.body.classList.add('pointer');clearTimeout(idle);idle=setTimeout(()=>document.body.classList.remove('pointer'),2500);});
+let tx=null;
+addEventListener('touchstart',e=>{tx=e.touches[0].clientX;},{passive:true});
+addEventListener('touchend',e=>{if(tx===null)return;const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50){dx<0?next():prev();}tx=null;});
+function fromHash(){const m=location.hash.match(/^#(\d+)(?:\.(\d+))?/);if(m)return[+m[1]-1,+(m[2]||0)];return[0,0];}
+const [hi,hn]=fromHash();show(hi,hn,false);
+addEventListener('hashchange',()=>{const [i,n]=fromHash();if(i!==cur||n!==slides[cur]._step)show(i,n,false);});
+})();
+</script>
+</body>
+</html>

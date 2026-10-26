@@ -1,0 +1,1152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Picking STM32 Parts</title>
+<meta name="description" content="How to pick the right parts and crystal for two custom STM32 boards: an STM32F407VGT6 robot I/O hub and an STM32F446RET6 fast control loop.">
+<style>
+@font-face{font-family:"Barlow";src:url("fonts/Barlow-Regular.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Barlow";src:url("fonts/Barlow-Medium.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Barlow";src:url("fonts/Barlow-SemiBold.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Barlow Condensed";src:url("fonts/BarlowCondensed-Medium.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Barlow Condensed";src:url("fonts/BarlowCondensed-SemiBold.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Barlow Semi Condensed";src:url("fonts/BarlowSemiCondensed-SemiBold.woff2") format("woff2");font-weight:600;font-display:swap}
+
+:root{
+  --paper:#EDF0F2; --paper-hi:#F8FAFB; --dots:#C3CDD5;
+  --ink:#17212B; --ink-2:#44525F; --ink-3:#7D8A96; --rule:#8C98A3; --line:#D3DAE0;
+  --net:#1D5DBF; --net-tint:#DCE6F4; --net-ink:#123D7E;
+  --a:#1D5DBF; --a-tint:#DCE6F4; --a-ink:#123D7E;
+  --b:#8B3FB5; --b-tint:#EEE2F5; --b-ink:#5B2180;
+  --board:#111920; --board-2:#1A252E; --board-rule:#33424F; --board-ink:#E4EAEF; --board-ink-2:#97A5B2; --board-dots:#27343F;
+  --cu-top:#E5483B; --cu-bot:#3B7EE8; --silk:#F2C94C; --edge:#DE57DE;
+  --ok:#2F9E5C; --ok-tint:#DDF1E5; --err:#D93B2F; --err-tint:#F8DEDB; --hl:#F4B63F;
+  --f-body:"Barlow","Inter","Segoe UI",system-ui,sans-serif;
+  --f-cond:"Barlow Condensed","Roboto Condensed","Arial Narrow",sans-serif;
+  --f-key:"Barlow Semi Condensed","Barlow","Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#2B343C}
+body{font-family:var(--f-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+#viewport{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#deck{position:relative;width:1600px;height:900px;flex:none;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--paper);color:var(--ink);overflow:hidden;visibility:hidden;opacity:0;transition:opacity .35s ease,visibility 0s linear .35s}
+.slide.active{visibility:visible;opacity:1;transition:opacity .35s ease,visibility 0s}
+.slide.dark{background:var(--board);color:var(--board-ink)}
+.instant,.instant *{transition:none!important}
+
+/* frame + title block */
+.frame{position:absolute;left:0;top:0;width:1600px;height:900px;pointer-events:none}
+.frame rect{fill:none;stroke:var(--rule);stroke-width:1}
+.frame .outer{stroke-width:1.6}
+.frame line{stroke:var(--rule);stroke-width:1}
+.frame text{fill:var(--ink-3);font:600 12px var(--f-key);text-anchor:middle;dominant-baseline:central}
+.dark .frame rect,.dark .frame line{stroke:var(--board-rule)}
+.dark .frame text{fill:var(--board-ink-2)}
+.tblock{position:absolute;right:44px;bottom:44px;width:476px;display:grid;grid-template-columns:1fr 82px 82px;border-top:1.5px solid var(--rule);border-left:1.5px solid var(--rule);background:var(--paper);z-index:3}
+.tblock>div{padding:5px 10px 6px;border-left:1px solid var(--rule);display:flex;flex-direction:column;min-width:0}
+.tblock .tb-course{grid-column:1/-1;border-left:0;border-bottom:1px solid var(--rule);flex-direction:row;justify-content:space-between;align-items:baseline;font:600 15px var(--f-key);color:var(--ink-2)}
+.tblock .tb-title{border-left:0}
+.tblock span{font:500 11px/1.2 var(--f-body);color:var(--ink-3)}
+.tblock b{font:600 17px/1.2 var(--f-key);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dark .tblock{background:var(--board);border-color:var(--board-rule)}
+.dark .tblock>div{border-color:var(--board-rule)}
+.dark .tblock .tb-course,.dark .tblock span{color:var(--board-ink-2)}
+.dark .tblock b{color:var(--board-ink)}
+
+/* type */
+.content{position:absolute;left:96px;top:92px;width:600px;z-index:2}
+.content.wide{width:1400px}
+h1{font:600 100px/.94 var(--f-cond);letter-spacing:-.01em;margin:0}
+h2{font:600 56px/1.02 var(--f-cond);margin:0 0 26px;letter-spacing:-.004em;display:flex;align-items:center;gap:18px}
+p.lead{font:400 28px/1.34 var(--f-body);color:var(--ink-2);margin:0}
+.dark p.lead{color:var(--board-ink-2)}
+p.hint{font:500 20px/1.4 var(--f-body);color:var(--ink-3);margin:40px 0 0;max-width:30em}
+p.sub{font:400 23px/1.4 var(--f-body);color:var(--ink-2);margin:-12px 0 0;max-width:62em}
+ul.points{list-style:none;margin:0;padding:0}
+ul.points li{font:400 24px/1.38 var(--f-body);margin:0 0 15px;padding-left:30px;position:relative}
+ul.points li::before{content:"";position:absolute;left:3px;top:.56em;width:11px;height:11px;border-radius:50%;background:var(--net)}
+.dark ul.points li::before{background:var(--cu-top);border-radius:2px}
+ul.points li.aside{font-size:20px;color:var(--ink-2)}
+ul.points li.aside::before{background:transparent;border:2px solid var(--ink-3)}
+.dark ul.points li.aside{color:var(--board-ink-2)}
+.menu{font:600 .9em var(--f-key);background:var(--net-tint);color:var(--net-ink);padding:1px 8px 2px;border-radius:5px;white-space:nowrap}
+.menu i{font-style:normal;opacity:.55;margin:0 5px}
+.tag{display:inline-flex;align-items:center;gap:6px;font:600 17px/1 var(--f-key);padding:5px 10px 6px;border-radius:5px;white-space:nowrap;vertical-align:.12em}
+.tag.a{background:var(--a-tint);color:var(--a-ink)}
+.tag.b{background:var(--b-tint);color:var(--b-ink)}
+.tag.ab{background:#E3E7EA;color:var(--ink-2)}
+.pn{font:600 1em var(--f-key);letter-spacing:.01em}
+.ok-t{color:var(--ok);font-weight:600}.err-t{color:var(--err);font-weight:600}
+
+[data-step]{opacity:0;transform:translateY(10px);transition:opacity .45s ease,transform .45s ease}
+[data-step].shown{opacity:1;transform:none}
+tr[data-step]{transform:none}
+
+.scene{position:absolute;left:740px;top:96px;width:780px;height:660px;z-index:1}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes fadein{to{opacity:1}}
+@keyframes pop{to{opacity:1;transform:none}}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+/* chip drawings */
+.chip .body{fill:var(--paper-hi);stroke:var(--ink);stroke-width:2.5}
+.chip .pin{fill:#A7B2BC}
+.chip .dot1{fill:var(--ink-3)}
+.chip .lbl{font:600 40px var(--f-cond);fill:var(--ink);text-anchor:middle}
+.chip .lbl2{font:600 19px var(--f-key);fill:var(--ink-2);text-anchor:middle}
+.wire{fill:none;stroke:var(--net);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1 2;stroke-dashoffset:0}
+.sym path,.sym rect,.sym circle,.gnd path{fill:none;stroke:var(--ink);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.sym .fill{fill:var(--paper-hi)}
+.svgt{font:600 18px var(--f-key);fill:var(--ink)}
+.svgt.s{font-size:15px;fill:var(--ink-2)}
+.svgt.m{text-anchor:middle}
+
+/* title scene */
+.title-scene .pin{opacity:0}
+.active .title-scene .pin{animation:fadein .2s ease forwards}
+.title-scene .wire{stroke-dashoffset:1}
+.active .title-scene .wire{animation:draw .6s ease 1.3s forwards}
+.title-scene .xt{opacity:0}
+.active .title-scene .xt{animation:fadein .5s ease 1.8s forwards}
+
+/* board cards */
+.cards{position:absolute;left:96px;top:196px;width:1410px;display:grid;grid-template-columns:1fr 1fr;gap:44px}
+.card{background:var(--paper-hi);border:1.5px solid var(--rule);border-radius:10px;padding:22px 26px 20px;position:relative;opacity:0;transform:translateY(14px)}
+.active .card{animation:pop .5s ease forwards}
+.active .card.b{animation-delay:.25s}
+.card::before{content:"";position:absolute;left:-1.5px;right:-1.5px;top:-1.5px;height:6px;border-radius:10px 10px 0 0}
+.card.a::before{background:var(--a)}.card.b::before{background:var(--b)}
+.card h3{margin:6px 0 4px;font:600 38px/1.05 var(--f-cond)}
+.card .job{font:400 21px/1.35 var(--f-body);color:var(--ink-2);margin:0 0 14px;min-height:56px}
+.card .row{display:grid;grid-template-columns:1fr 190px;gap:18px;align-items:start}
+.card dl{margin:0;display:grid;grid-template-columns:118px 1fr;gap:7px 12px;font:400 19px/1.3 var(--f-body)}
+.card dt{font:600 17px/1.5 var(--f-key);color:var(--ink-3)}
+.card dd{margin:0;color:var(--ink)}
+.card svg{width:190px;height:auto;display:block}
+.card .scale{font:600 15px var(--f-key);fill:var(--ink-3);text-anchor:middle}
+
+/* roadmap */
+.road-trace{position:absolute;left:0;top:0;width:1600px;height:900px;pointer-events:none}
+.road-trace path{fill:none;stroke:var(--ink-2);stroke-width:7;stroke-linecap:round;stroke-dasharray:1 2;stroke-dashoffset:1}
+.active .road-trace path{animation:draw 2.2s linear .2s forwards}
+.road-pad{position:absolute;top:404px;width:66px;height:66px;margin-left:-33px;border-radius:50%;display:grid;place-items:center;font:600 33px/1 var(--f-cond);background:var(--paper-hi);border:4px solid var(--ink-2);color:var(--ink);opacity:0;transform:scale(.6)}
+.road-pad.xtal{border-color:var(--hl);background:#FFF6E2}
+.road-lab{position:absolute;top:494px;width:166px;margin-left:-83px;text-align:center;font:500 22px/1.25 var(--f-body);opacity:0}
+.active .road-pad{animation:pop .4s cubic-bezier(.3,1.6,.5,1) forwards}
+.active .road-lab{animation:fadein .5s ease forwards}
+.road-foot{position:absolute;left:96px;top:680px;width:900px;font:400 22px/1.4 var(--f-body);color:var(--ink-2)}
+
+/* requirements */
+.req{position:absolute;left:96px;top:196px;width:1410px;display:grid;grid-template-columns:1fr 1fr;gap:44px}
+.req table{width:100%;border-collapse:collapse;font:400 21px/1.3 var(--f-body)}
+.req caption{text-align:left;padding-bottom:10px}
+.req th{text-align:left;font:600 16px var(--f-key);color:var(--ink-3);padding:6px 8px;border-bottom:1.5px solid var(--ink-2)}
+.req td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.req td:first-child{color:var(--ink);width:44%}
+.req td:last-child{color:var(--ink-2)}
+.req td .arrow{color:var(--ink-3);margin-right:6px}
+
+/* pin budget */
+.budget{position:absolute;left:96px;top:190px;width:1410px}
+.bud{margin-bottom:36px}
+.bud-h{display:flex;align-items:baseline;gap:16px;margin-bottom:10px}
+.bud-h .tot{font:600 26px var(--f-cond)}
+.bud-h .cap{font:400 19px var(--f-body);color:var(--ink-2)}
+.bar{position:relative;height:46px;border:1.5px solid var(--ink-2);border-radius:6px;background:repeating-linear-gradient(90deg,transparent 0 12px,rgba(23,33,43,.05) 12px 13px)}
+.bar .seg{position:absolute;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font:600 15px var(--f-key);color:#fff;white-space:nowrap;overflow:hidden;border-right:1.5px solid rgba(255,255,255,.75);transform-origin:left;opacity:0}
+.bar.a .seg{background:var(--a)}.bar.a .seg:nth-child(even){background:#4F82D2}
+.bar.b .seg{background:var(--b)}.bar.b .seg:nth-child(even){background:#A866CB}
+.s1 .bar.a .seg,.s2 .bar.b .seg{animation:pop .35s ease forwards}
+.bar .mark{position:absolute;top:-12px;bottom:-12px;border-left:2px dashed var(--err);opacity:0}
+.bar .mark span{position:absolute;left:8px;top:-22px;font:600 15px var(--f-key);color:var(--err);white-space:nowrap}
+.s1 .bar.a .mark{opacity:1;transition:opacity .4s 1.6s}
+.legend{display:grid;grid-template-columns:repeat(4,1fr);gap:4px 24px;margin-top:12px;font:400 18px/1.35 var(--f-body);color:var(--ink-2)}
+.legend b{font:600 18px var(--f-key);color:var(--ink);margin-right:6px;display:inline-block;min-width:22px;text-align:right}
+
+/* decode */
+.decode{position:absolute;left:96px;top:188px;width:1410px}
+.pnrow{display:flex;align-items:flex-start;margin-bottom:142px}
+.pnrow{opacity:0;transform:translateY(10px)}
+.active .pnrow{animation:pop .5s ease forwards}
+.active .pnrow.b{animation-delay:.35s}
+.pnrow .seg{position:relative}
+.pnrow .seg .ch{font:600 100px/1 var(--f-cond);padding:0 2px;margin-right:9px;letter-spacing:.01em;border-bottom:4px solid currentColor}
+.pnrow.a .seg .ch{color:var(--a-ink)}.pnrow.b .seg .ch{color:var(--b-ink)}
+.pnrow .seg .ex{position:absolute;z-index:3;background:var(--paper);padding-right:8px;left:2px;top:calc(100% + 14px);white-space:nowrap;padding-left:10px;border-left:2px solid var(--rule);font:600 19px/1.25 var(--f-key);color:var(--ink)}
+.pnrow .seg.r2 .ex{top:calc(100% + 70px);z-index:1}
+.pnrow .seg .ex::before{content:"";position:absolute;left:-2px;bottom:100%;height:14px;border-left:2px solid var(--rule)}
+.pnrow .seg.r2 .ex::before{height:70px}
+.pnrow .seg .ex span{display:block;font:400 17px/1.3 var(--f-body);color:var(--ink-2)}
+.pnrow .seg.opt .ch{color:var(--ink-3)}
+.decode-note{font:400 22px/1.4 var(--f-body);color:var(--ink-2);max-width:900px}
+
+/* support circuit table */
+.sup{position:absolute;left:96px;top:186px;width:780px;border-collapse:collapse;font:400 19px/1.3 var(--f-body)}
+.sup th{text-align:left;font:600 16px var(--f-key);color:var(--ink-3);padding:6px 8px;border-bottom:1.5px solid var(--ink-2)}
+.sup td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-2)}
+.sup td:first-child{font:600 19px/1.3 var(--f-key);color:var(--ink);white-space:nowrap}
+.sup td.same{color:var(--ink-2)}
+.sup .hl-a{color:var(--a-ink);font-weight:600}.sup .hl-b{color:var(--b-ink);font-weight:600}
+.sup-scene{position:absolute;left:920px;top:150px;width:600px;height:620px}
+.sup-scene .grp{opacity:0;transition:opacity .45s ease}
+.s1 .sup-scene .g1,.s2 .sup-scene .g2,.s3 .sup-scene .g3,.s4 .sup-scene .g4,.s5 .sup-scene .g5{opacity:1}
+.sup-scene .pinlab{font:600 15px var(--f-key);fill:var(--ink-2)}
+.sup-scene .val{font:600 15px var(--f-key);fill:var(--net-ink)}
+
+/* power bars */
+.pw{position:absolute;left:760px;top:190px;width:740px}
+.pw-row{margin-bottom:26px}
+.pw-row .lab{font:600 21px var(--f-key);margin-bottom:6px;display:flex;justify-content:space-between}
+.pw-row .lab span{font:400 18px var(--f-body);color:var(--ink-2)}
+.pw-track{height:34px;background:#E1E7EC;border-radius:5px;position:relative;overflow:visible}
+.pw-fill{position:absolute;left:0;top:0;bottom:0;border-radius:5px;transform-origin:left;transform:scaleX(0);transition:transform 1s cubic-bezier(.3,0,.2,1)}
+.active .pw-fill{transform:scaleX(1)}
+.pw-fill.hot{background:var(--err)}.pw-fill.warm{background:#E39B2D}.pw-fill.cool{background:var(--ok)}
+.pw-val{position:absolute;top:4px;font:600 21px var(--f-key);white-space:nowrap}
+.pw-note{font:400 19px/1.4 var(--f-body);color:var(--ink-2);margin-top:8px}
+.formula{font:600 30px/1.2 var(--f-key);color:var(--ink);background:var(--paper-hi);border:1.5px solid var(--rule);border-radius:8px;padding:14px 20px;display:inline-block}
+.formula sub{font-size:.6em}
+
+/* interface cards */
+.ifc{position:absolute;left:96px;top:186px;width:1410px;display:grid;grid-template-columns:1fr 1fr;gap:44px}
+.ifc h3{font:600 30px var(--f-cond);margin:0 0 12px;display:flex;align-items:center;gap:12px}
+.ifc ul{list-style:none;margin:0;padding:0}
+.ifc li{padding:11px 0 11px;border-bottom:1px solid var(--line);font:400 19px/1.35 var(--f-body);color:var(--ink-2)}
+.ifc li b{display:block;font:600 21px/1.3 var(--f-key);color:var(--ink)}
+.ifc-note{position:absolute;left:96px;top:690px;width:960px;font:400 19px/1.4 var(--f-body);color:var(--ink-2);padding-left:16px;border-left:4px solid var(--hl)}
+
+/* library mock */
+.lib{position:absolute;left:0;top:30px;width:780px;background:#fff;border:1.5px solid var(--rule);border-radius:8px;overflow:hidden;font-family:var(--f-body)}
+.lib-h{padding:10px 14px;border-bottom:1px solid var(--line);font:600 16px var(--f-key);color:var(--ink-3);display:flex;gap:18px}
+.lib-h b{color:var(--ink)}
+.lib table{width:100%;border-collapse:collapse;font:400 16px/1.3 var(--f-body)}
+.lib th{text-align:left;font:600 14px var(--f-key);color:var(--ink-3);padding:7px 12px;background:#F1F4F6;border-bottom:1px solid var(--line)}
+.lib td{padding:9px 12px;border-bottom:1px solid #EEF1F3;color:var(--ink-2);white-space:nowrap}
+.lib td.ext{transition:background-color .3s,color .3s}
+.s1 .lib td.ext{background:#FFF1D6;color:#8A5300;font-weight:600}
+.fpdec{position:absolute;left:0;top:250px;width:780px;opacity:0;transition:opacity .4s}
+.s2 .fpdec{opacity:1}
+.fpdec .fp{font:600 30px var(--f-key);letter-spacing:.01em;display:flex;flex-wrap:wrap;gap:2px}
+.fpdec .fp span{padding:2px 4px;border-bottom:3px solid var(--ink-3)}
+.fpdec dl{display:grid;grid-template-columns:110px 1fr;gap:8px 14px;margin:18px 0 0;font:400 19px/1.3 var(--f-body)}
+.fpdec dt{font:600 19px var(--f-key)}
+.fpdec dd{margin:0;color:var(--ink-2)}
+
+/* tolerance chart */
+.tol{position:absolute;left:760px;top:200px;width:740px}
+.tol-row{display:grid;grid-template-columns:210px 1fr;gap:16px;align-items:center;margin-bottom:22px}
+.tol-row .nm{font:600 19px/1.25 var(--f-key)}
+.tol-row .nm span{display:block;font:400 16px var(--f-body);color:var(--ink-2)}
+.tol-track{position:relative;height:30px}
+.tol-bar{position:absolute;top:0;bottom:0;border-radius:4px;transform-origin:left;transform:scaleX(0);transition:transform .9s cubic-bezier(.3,0,.2,1)}
+.active .tol-bar{transform:scaleX(1)}
+.tol-bar.need{background:#9AA6B1}.tol-bar.have{background:var(--net)}.tol-bar.bad{background:var(--err)}
+.tol-bar b{position:absolute;right:-8px;top:3px;transform:translateX(100%);font:600 18px var(--f-key);color:var(--ink);white-space:nowrap}
+.tol-axis{position:relative;height:30px;margin-left:226px;border-top:1.5px solid var(--ink-2);font:600 14px var(--f-key);color:var(--ink-3)}
+.tol-axis span{position:absolute;top:6px;transform:translateX(-50%)}
+.tol-axis span::before{content:"";position:absolute;left:50%;top:-12px;height:6px;border-left:1.5px solid var(--ink-2)}
+
+/* PLL diagram */
+.pll{position:absolute;left:96px;top:256px;width:1410px}
+.pll svg{width:1240px;height:auto;display:block;overflow:visible}
+.pll .bx{fill:var(--paper-hi);stroke:var(--ink-2);stroke-width:2}
+.pll .bx.ok{stroke:var(--ok);fill:var(--ok-tint)}
+.pll .bx.bad{stroke:var(--err);fill:var(--err-tint)}
+.pll .bt{font:600 23px var(--f-key);fill:var(--ink);text-anchor:middle}
+.pll .bt2{font:400 16px var(--f-body);fill:var(--ink-2);text-anchor:middle}
+.pll .ar{fill:none;stroke:var(--ink-2);stroke-width:2.5;marker-end:url(#arw)}
+.pll .al{font:600 19px var(--f-key);fill:var(--net-ink);text-anchor:middle}
+.pll .rowlab{font:600 19px var(--f-key)}
+.pll .g{opacity:0;transition:opacity .5s ease}
+.s1 .pll .g1,.s2 .pll .g2,.s3 .pll .g3{opacity:1}
+.s2 .pll .g2{transition-delay:.1s}
+
+/* datasheet mock */
+.dsheet{position:absolute;left:760px;top:170px;width:740px;background:#fff;border:1.5px solid var(--rule);border-radius:8px;overflow:hidden}
+.dsheet .dh{padding:14px 18px;border-bottom:1.5px solid var(--ink-2);display:flex;justify-content:space-between;align-items:baseline}
+.dsheet .dh b{font:600 24px var(--f-cond)}
+.dsheet .dh span{font:400 15px var(--f-body);color:var(--ink-3)}
+.dsheet table{width:100%;border-collapse:collapse;font:400 19px/1.3 var(--f-body)}
+.dsheet td{padding:11px 18px;border-bottom:1px solid var(--line);transition:background-color .3s}
+.dsheet td:first-child{color:var(--ink-2)}
+.dsheet td:last-child{text-align:right;font:600 20px var(--f-key);color:var(--ink)}
+.dsheet .foot{padding:10px 18px;font:400 15px var(--f-body);color:var(--ink-3)}
+.slide[data-cur="1"] .dsheet tr.r1 td,.slide[data-cur="2"] .dsheet tr.r2 td,.slide[data-cur="3"] .dsheet tr.r3 td,.slide[data-cur="4"] .dsheet tr.r4 td,.slide[data-cur="5"] .dsheet tr.r5 td,.slide[data-cur="6"] .dsheet tr.r6 td{background:#FFF1D6}
+.params{list-style:none;margin:0;padding:0}
+.params li{font:400 21px/1.35 var(--f-body);color:var(--ink-2);margin-bottom:13px;transition:opacity .3s}
+.params li b{display:block;font:600 22px var(--f-key);color:var(--ink)}
+.slide:not([data-cur="0"]) .params li{opacity:.35}
+.slide[data-cur="1"] .params li:nth-child(1),.slide[data-cur="2"] .params li:nth-child(2),.slide[data-cur="3"] .params li:nth-child(3),.slide[data-cur="4"] .params li:nth-child(4),.slide[data-cur="5"] .params li:nth-child(5),.slide[data-cur="6"] .params li:nth-child(6){opacity:1}
+
+/* gain margin */
+.gm-formula{font:600 40px/1.2 var(--f-key);color:var(--ink);margin:4px 0 22px}
+.gm-formula small{font:400 20px var(--f-body);color:var(--ink-2);display:block;margin-top:8px}
+.limits{border-collapse:collapse;font:400 19px/1.3 var(--f-body);width:100%}
+.limits th{text-align:left;font:600 15px var(--f-key);color:var(--ink-3);padding:6px 8px;border-bottom:1.5px solid var(--ink-2)}
+.limits td{padding:8px;border-bottom:1px solid var(--line)}
+.limits td:last-child{font:600 20px var(--f-key);text-align:right}
+.work{position:absolute;left:820px;top:200px;width:680px;background:var(--paper-hi);border:1.5px solid var(--rule);border-radius:10px;padding:22px 26px}
+.work h3{margin:0 0 14px;font:600 26px var(--f-cond)}
+.work .ln{font:400 22px/1.5 var(--f-body);color:var(--ink-2);margin-bottom:8px}
+.work .ln b{font:600 24px var(--f-key);color:var(--ink)}
+.work .res{margin-top:14px;padding:12px 16px;border-radius:8px;background:var(--ok-tint);color:#1E6E3F;font:600 24px/1.35 var(--f-key)}
+
+/* load caps */
+.lc-scene{position:absolute;left:800px;top:150px;width:700px}
+.lc-scene svg{width:700px;height:auto;display:block;overflow:visible}
+.lc-scene .ghost path{stroke-dasharray:5 5;stroke:var(--ink-3)}
+.lc-scene .v{font:600 22px var(--f-key);fill:var(--net-ink)}
+.lc-scene .vv{opacity:0;transition:opacity .4s}
+.s1 .lc-scene .vv{opacity:1}
+
+/* calculator */
+.calc{position:absolute;left:96px;top:186px;width:1410px;display:grid;grid-template-columns:600px 1fr;gap:44px}
+.calc-in{background:var(--paper-hi);border:1.5px solid var(--rule);border-radius:10px;padding:18px 22px}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.presets button{font:600 16px var(--f-key);color:var(--net-ink);background:var(--net-tint);border:0;border-radius:6px;padding:7px 11px;cursor:pointer}
+.presets button:hover{background:#C9D8EF}
+.presets button:focus-visible,.calc input:focus-visible,.calc select:focus-visible{outline:3px solid var(--hl);outline-offset:2px}
+.fld{display:grid;grid-template-columns:200px 1fr;align-items:center;gap:12px;margin-bottom:11px}
+.fld label{font:600 18px var(--f-key);color:var(--ink)}
+.fld label span{display:block;font:400 14px var(--f-body);color:var(--ink-3)}
+.fld .in{display:flex;gap:8px}
+.calc input,.calc select{font:600 20px var(--f-key);color:var(--ink);background:#fff;border:1.5px solid #B9C3CC;border-radius:6px;padding:6px 10px;width:100%;min-width:0}
+.calc input{text-align:right}
+.calc .in select{width:96px;flex:none}
+.calc .unit{width:96px;flex:none;font:600 20px var(--f-key);color:var(--ink-2);padding:7px 12px}
+.calc-out{display:flex;flex-direction:column;gap:16px}
+.verdict{border-radius:10px;padding:18px 22px;border:2px solid}
+.verdict.pass{background:var(--ok-tint);border-color:var(--ok)}
+.verdict.fail{background:var(--err-tint);border-color:var(--err)}
+.verdict .big{font:600 40px/1.1 var(--f-cond)}
+.verdict.pass .big{color:#1E6E3F}.verdict.fail .big{color:#A3261C}
+.verdict p{margin:8px 0 0;font:400 20px/1.4 var(--f-body);color:var(--ink-2)}
+.nums{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.num{background:var(--paper-hi);border:1.5px solid var(--rule);border-radius:10px;padding:14px 18px}
+.num span{display:block;font:500 16px var(--f-body);color:var(--ink-3)}
+.num b{display:block;font:600 34px/1.15 var(--f-cond);color:var(--ink);margin-top:2px}
+.num small{display:block;font:400 16px/1.35 var(--f-body);color:var(--ink-2);margin-top:2px}
+
+/* layout (dark) */
+.lay{position:absolute;left:760px;top:150px;width:760px;display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.lay figure{margin:0;opacity:0;transform:translateY(10px);transition:opacity .45s,transform .45s}
+.s1 .lay .do,.s2 .lay .avoid{opacity:1;transform:none}
+.lay figcaption{font:600 22px var(--f-key);margin-bottom:10px;display:flex;align-items:center;gap:10px}
+.lay figcaption i{width:14px;height:14px;border-radius:50%;display:inline-block}
+.lay .do i{background:#4CC27F}.lay .avoid i{background:var(--cu-top)}
+.lay svg{width:100%;height:auto;display:block;background:#0C1217;border:1.5px solid var(--board-rule);border-radius:8px}
+.lay .notes-l{margin-top:10px;font:400 17px/1.4 var(--f-body);color:var(--board-ink-2)}
+
+/* comparison table */
+.cmp{position:absolute;left:96px;top:196px;width:1410px;table-layout:fixed;border-collapse:collapse;font:400 21px/1.35 var(--f-body)}
+.cmp th{text-align:left;font:600 26px var(--f-cond);padding:8px 14px 10px;border-bottom:2px solid var(--ink)}
+.cmp th:first-child{width:200px}
+.cmp td{padding:13px 14px;border-bottom:1px solid var(--line);color:var(--ink-2);vertical-align:top}
+.cmp td:first-child{font:600 19px var(--f-key);color:var(--ink-3)}
+
+/* parts list */
+.plist{position:absolute;left:96px;top:186px;width:1410px;border-collapse:collapse;font:400 18px/1.3 var(--f-body)}
+.plist th{text-align:left;font:600 15px var(--f-key);color:var(--ink-3);padding:6px 10px;border-bottom:1.5px solid var(--ink-2)}
+.plist td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-2)}
+.plist td.role{font:600 18px/1.3 var(--f-key);color:var(--ink);white-space:nowrap}
+.plist td.pick{font:600 18px var(--f-key);color:var(--ink)}
+.plist .todo{display:inline-block;font:500 15px var(--f-body);color:var(--ink-3);border:1.5px dashed #AEB8C1;border-radius:5px;padding:1px 10px}
+.plist .cls{font:600 15px var(--f-key);padding:2px 8px;border-radius:4px}
+.plist .cls.ext{background:#FFF1D6;color:#8A5300}.plist .cls.basic{background:var(--ok-tint);color:#1E6E3F}
+
+/* questions */
+.qs{position:absolute;left:96px;top:196px;width:1410px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:40px}
+.qs h3{font:600 28px var(--f-cond);margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid var(--ink);display:flex;gap:10px;align-items:center}
+.qs ol{margin:0;padding:0 0 0 24px}
+.qs li{font:400 21px/1.38 var(--f-body);margin-bottom:16px;color:var(--ink);padding-left:4px}
+
+.res{list-style:none;margin:30px 0 0;padding:0}
+.res li{margin-bottom:18px;font:400 20px/1.35 var(--f-body);color:var(--ink-2)}
+.res a{display:block;font:600 23px var(--f-key);color:var(--ink);text-decoration:none;border-bottom:1.5px solid var(--rule);width:max-content;margin-bottom:2px}
+.res a:hover{border-color:var(--net)}
+.res a:focus-visible{outline:3px solid var(--hl);outline-offset:3px}
+
+/* presenter chrome */
+#notes{position:fixed;left:0;right:0;bottom:0;max-height:38vh;overflow:auto;background:#0F161C;color:#E6ECF1;font:400 19px/1.55 var(--f-body);padding:16px 28px 20px;transform:translateY(105%);transition:transform .3s ease;z-index:10;border-top:3px solid var(--net)}
+#notes h5{margin:0 0 6px;font:600 14px var(--f-key);color:#97A5B2}
+body.show-notes #notes{transform:none}
+#help{position:fixed;right:16px;bottom:16px;background:#0F161C;color:#E6ECF1;font:400 15px/1.6 var(--f-body);padding:12px 16px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:11}
+#help kbd{font:600 13px var(--f-key);padding:0 6px 1px;border:1px solid #44545F;border-bottom-width:2px;border-radius:5px;background:#22303B}
+body.show-help #help{opacity:1}
+#navbtns{position:fixed;left:14px;bottom:14px;display:flex;gap:6px;z-index:9;opacity:0;transition:opacity .3s}
+body.pointer #navbtns{opacity:.7}
+#navbtns button{width:42px;height:38px;border-radius:7px;border:0;background:#0F161C;color:#fff;font:600 20px var(--f-key);cursor:pointer}
+#navbtns button:focus-visible{outline:3px solid var(--hl)}
+.notes{display:none}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01s!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:.01s!important;transition-delay:0s!important}
+}
+</style>
+</head>
+<body>
+<div id="viewport"><div id="deck">
+
+<!-- 1 Title -->
+<section class="slide" data-title="Introduction" data-board="A + B">
+  <div class="content" style="top:150px;width:660px">
+    <h1>Picking parts for a custom STM32 board</h1>
+    <p class="lead" style="margin-top:34px">Two boards, one method, and how to choose the crystal that keeps them on time.</p>
+    <p class="hint">Use the arrow keys or a clicker to move through. Press N for speaker notes.</p>
+  </div>
+  <div class="scene title-scene"><svg viewBox="0 0 720 560" width="780" aria-hidden="true" id="titleChip"></svg></div>
+  <aside class="notes">Today is about the decisions that happen before anyone opens a PCB editor: which microcontroller, which package, which support parts, and which crystal. We'll use two real boards as running examples. Board A is a robot I/O hub on an STM32F407VGT6. Board B is a fast control-loop board on an STM32F446RET6.</aside>
+</section>
+
+<!-- 2 Two boards -->
+<section class="slide" data-title="Two boards, two jobs" data-board="A + B">
+  <div class="content wide"><h2>Two boards, two jobs</h2></div>
+  <div class="cards">
+    <article class="card a">
+      <span class="tag a">Board A</span>
+      <h3>Robot I/O hub</h3>
+      <p class="job">Connects to a large array of sensors, actuators and buses at the same time, and joins the robot's network.</p>
+      <div class="row">
+        <dl>
+          <dt>MCU</dt><dd class="pn">STM32F407VGT6</dd>
+          <dt>Core</dt><dd>Cortex-M4 with FPU, 168 MHz</dd>
+          <dt>Memory</dt><dd>1 MB flash, 192 KB RAM</dd>
+          <dt>Package</dt><dd>LQFP-100, 82 GPIOs</dd>
+          <dt>Stand-outs</dt><dd>Ethernet MAC, 2× CAN, USB OTG FS and HS</dd>
+        </dl>
+        <svg class="pkgA" viewBox="0 0 190 230" aria-hidden="true"></svg>
+      </div>
+    </article>
+    <article class="card b">
+      <span class="tag b">Board B</span>
+      <h3>Fast control loop</h3>
+      <p class="job">A smaller board for a drone or motor controller that needs top speed, audio processing or fast external memory.</p>
+      <div class="row">
+        <dl>
+          <dt>MCU</dt><dd class="pn">STM32F446RET6</dd>
+          <dt>Core</dt><dd>Cortex-M4 with FPU, 180 MHz</dd>
+          <dt>Memory</dt><dd>512 KB flash, 128 KB RAM</dd>
+          <dt>Package</dt><dd>LQFP-64, 50 GPIOs</dd>
+          <dt>Stand-outs</dt><dd>Quad-SPI, 2× SAI audio, SPDIF-RX, 2× CAN</dd>
+        </dl>
+        <svg class="pkgB" viewBox="0 0 190 230" aria-hidden="true"></svg>
+      </div>
+    </article>
+  </div>
+  <aside class="notes">Same core family, very different jobs. Board A trades size for pins and connectivity: 82 GPIOs and a built-in Ethernet MAC. Board B trades pins for speed and special interfaces: 180 MHz, Quad-SPI for external flash, and SAI for audio. The packages are drawn to the same scale: the LQFP-100 body is 14 mm square, the LQFP-64 is 10 mm. Note the F407's 192 KB of RAM includes 64 KB of core-coupled memory that DMA can't reach.</aside>
+</section>
+
+<!-- 3 Method -->
+<section class="slide" data-title="The method" data-board="A + B">
+  <div class="content wide"><h2>One method for every board</h2></div>
+  <svg class="road-trace" viewBox="0 0 1600 900" aria-hidden="true"><path pathLength="1" d="M110 437 H1490"/></svg>
+  <div class="road"></div>
+  <p class="road-foot">Steps 1 to 5 and 7 to 8 are about parts. Step 6, the crystal, gets its own section because it is where most first boards fail to start.</p>
+  <aside class="notes">This is the order to make decisions in. The mistake people make is starting at step 3, picking a chip they like, and discovering at step 4 that the pins don't work out. Requirements and the pin count come first.</aside>
+</section>
+
+<!-- 4 Requirements -->
+<section class="slide" data-title="Requirements first" data-board="A + B" data-steps="2">
+  <div class="content wide"><h2>Start from what the board must do</h2></div>
+  <div class="req">
+    <table data-step="1"><caption><span class="tag a">Board A</span></caption>
+      <thead><tr><th>The robot needs to…</th><th>So the MCU needs</th></tr></thead>
+      <tbody>
+        <tr><td>Read dozens of sensors</td><td>3× I²C, 3× SPI, 12-bit ADC channels</td></tr>
+        <tr><td>Drive servos and motors</td><td>Timers with PWM outputs and encoder inputs</td></tr>
+        <tr><td>Join the robot's network</td><td>Ethernet MAC plus an external PHY</td></tr>
+        <tr><td>Talk to motor controllers</td><td>2× CAN plus transceivers</td></tr>
+        <tr><td>Connect to a laptop for setup</td><td>USB</td></tr>
+      </tbody></table>
+    <table data-step="2"><caption><span class="tag b">Board B</span></caption>
+      <thead><tr><th>The drone or motor needs to…</th><th>So the MCU needs</th></tr></thead>
+      <tbody>
+        <tr><td>Run a fast control loop</td><td>High clock speed and a hardware FPU</td></tr>
+        <tr><td>Spin a brushless motor</td><td>An advanced timer: 3 complementary PWM pairs and a break input</td></tr>
+        <tr><td>Store a big table or flight log</td><td>Quad-SPI flash</td></tr>
+        <tr><td>Process audio</td><td>SAI audio interface</td></tr>
+        <tr><td>Report to a host</td><td>UART or CAN, plus USB</td></tr>
+      </tbody></table>
+  </div>
+  <aside class="notes">Write requirements in the robot's language first, then translate each into a peripheral. This is the list you take into the chip selection. Ask the room: what's missing from Board A's list? Usually someone says power monitoring or a status display.</aside>
+</section>
+
+<!-- 5 Pin budget -->
+<section class="slide" data-title="Pin budget" data-board="A + B" data-steps="2">
+  <div class="content wide"><h2>Count the pins before you pick the package</h2></div>
+  <div class="budget"></div>
+  <aside class="notes">Add up every pin each interface uses. Board A needs 79 of the F407's 82 GPIOs, which is why it needs the 100-pin package; a 64-pin part would run out where the dashed line is. Board B fits in 44 of 50. These budgets are examples; edit the PINS list at the top of the file to match your design. Leave some spare pins: boards always grow.</aside>
+</section>
+
+<!-- 6 Decode part number -->
+<section class="slide" data-title="Read the part number" data-board="A + B">
+  <div class="content wide"><h2>Read the part number</h2></div>
+  <div class="decode"></div>
+  <aside class="notes">Every letter in an STM32 part number means something. The two you most often get wrong are the pin-count letter and the flash letter. The TR suffix just means the chips ship on a tape-and-reel for pick-and-place machines; that's why the library search shows STM32F446RET6 and STM32F446RET6TR as separate rows.</aside>
+</section>
+
+<!-- 7 CubeMX -->
+<section class="slide" data-title="Lock the pinout" data-board="B" data-steps="2">
+  <div class="content">
+    <h2>Lock the pinout in CubeMX</h2>
+    <ul class="points">
+      <li>STM32CubeMX is ST's free configuration tool. Pick the exact part, then turn on each peripheral you need.</li>
+      <li>It assigns pins and flags conflicts when two peripherals want the same one.</li>
+      <li>Its clock tab checks your crystal and PLL settings. We'll use it in the crystal section.</li>
+      <li>Export the pin list and freeze it before PCB layout starts.</li>
+    </ul>
+  </div>
+  <div class="scene"><svg viewBox="0 0 720 600" width="780" aria-hidden="true" id="cubeChip"></svg></div>
+  <aside class="notes">Each pin can only do one job at a time. Ethernet on the F407 and Quad-SPI on the F446 both use fixed groups of pins, so turn those on first and fit everything else around them. The colors on the chip are illustrative, not the real F446 pin map; do this exercise in CubeMX with your actual list.</aside>
+</section>
+
+<!-- 8 Support circuit -->
+<section class="slide" data-title="Support circuit" data-board="A + B" data-steps="5">
+  <div class="content wide"><h2>The support circuit every STM32 needs</h2></div>
+  <table class="sup">
+    <thead><tr><th>Part</th><th><span class="tag a">A</span> F407VGT6</th><th><span class="tag b">B</span> F446RET6</th></tr></thead>
+    <tbody>
+      <tr data-step="1"><td>VDD decoupling</td><td colspan="2" class="same">100 nF per VDD pin, plus one 4.7 to 10 µF bulk capacitor</td></tr>
+      <tr data-step="1"><td>VDDA</td><td colspan="2" class="same">100 nF + 1 µF; a ferrite bead from VDD keeps the ADC quiet</td></tr>
+      <tr data-step="2"><td>VCAP (core regulator)</td><td><span class="hl-a">2 × 2.2 µF</span>, ESR under 2 Ω</td><td><span class="hl-b">1 × 4.7 µF</span>, ESR under 1 Ω</td></tr>
+      <tr data-step="3"><td>NRST and BOOT0</td><td colspan="2" class="same">100 nF on NRST; 10 kΩ from BOOT0 to GND to boot from flash</td></tr>
+      <tr data-step="4"><td>Crystals</td><td colspan="2" class="same">HSE for the system clock, LSE (32.768 kHz) for the RTC. Next section.</td></tr>
+      <tr data-step="5"><td>Debug header</td><td colspan="2" class="same">SWD: SWDIO, SWCLK, NRST, 3.3 V, GND</td></tr>
+    </tbody>
+  </table>
+  <div class="sup-scene"><svg viewBox="0 0 600 620" width="600" aria-hidden="true">
+    <g class="sym"><rect class="fill" x="200" y="110" width="200" height="400" rx="4"/></g>
+    <text class="svgt m" x="300" y="300" style="font-size:30px">STM32</text>
+    <text class="pinlab" x="208" y="166">VDD</text><text class="pinlab" x="208" y="236">VDDA</text><text class="pinlab" x="208" y="316">VCAP</text>
+    <text class="pinlab" x="392" y="166" text-anchor="end">NRST</text><text class="pinlab" x="392" y="216" text-anchor="end">BOOT0</text>
+    <text class="pinlab" x="392" y="296" text-anchor="end">OSC_IN</text><text class="pinlab" x="392" y="346" text-anchor="end">OSC_OUT</text>
+    <text class="pinlab" x="392" y="426" text-anchor="end">SWDIO</text><text class="pinlab" x="392" y="466" text-anchor="end">SWCLK</text>
+    <g class="sym"><path d="M200 160 H180 M200 230 H180 M200 310 H180 M400 160 H420 M400 210 H420 M400 290 H420 M400 340 H420 M400 420 H420 M400 460 H420"/></g>
+    <!-- g1 decoupling -->
+    <g class="grp g1"><g class="sym"><path d="M180 160 H90 M120 160 V178 M106 178 H134 M106 186 H134 M120 186 V206 M60 160 V178 M46 178 H74 M46 186 H74 M60 186 V206"/><path d="M90 160 H60"/><path d="M180 230 H120 V248 M106 248 H134 M106 256 H134 M120 256 V276"/></g>
+      <g class="gnd"><path d="M110 206 H130 M114 212 H126 M50 206 H70 M54 212 H66 M110 276 H130 M114 282 H126"/></g>
+      <text class="val" x="70" y="146">4.7 µF + 100 nF ×n</text><text class="val" x="104" y="268" text-anchor="end">1 µF + 100 nF</text></g>
+    <!-- g2 VCAP -->
+    <g class="grp g2"><g class="sym"><path d="M180 310 H120 V328 M106 328 H134 M106 336 H134 M120 336 V356"/></g><g class="gnd"><path d="M110 356 H130 M114 362 H126"/></g><text class="val" x="20" y="384">A: 2 × 2.2 µF · B: 4.7 µF</text></g>
+    <!-- g3 NRST / BOOT0 -->
+    <g class="grp g3"><g class="sym"><path d="M420 160 H480 V178 M466 178 H494 M466 186 H494 M480 186 V200"/><path d="M420 210 H540 V222"/><rect class="fill" x="533" y="222" width="14" height="34"/><path d="M540 256 V268"/></g>
+      <g class="gnd"><path d="M470 200 H490 M474 206 H486 M530 268 H550 M534 274 H546"/></g>
+      <text class="val" x="496" y="194">100 nF</text><text class="val" x="552" y="244">10 k</text></g>
+    <!-- g4 crystal -->
+    <g class="grp g4"><g class="sym"><path d="M420 290 H470 V298 M458 298 H482 M458 332 H482 M470 332 V340 H420"/><rect class="fill" x="463" y="303" width="14" height="24"/><path d="M470 290 H530 V300 M516 300 H544 M516 308 H544 M530 308 V320 M470 340 H580 V352 M566 352 H594 M566 360 H594 M580 360 V372"/></g>
+      <g class="gnd"><path d="M520 320 H540 M524 326 H536 M570 372 H590 M574 378 H586"/></g>
+      <text class="val" x="424" y="320">HSE</text></g>
+    <!-- g5 SWD -->
+    <g class="grp g5"><g class="sym"><path d="M420 420 H480 M420 460 H480"/><rect class="fill" x="480" y="400" width="90" height="110" rx="3"/></g><text class="svgt m" x="525" y="462" style="font-size:18px">SWD</text><text class="val" x="482" y="530">5-pin header</text></g>
+  </svg></div>
+  <aside class="notes">This list is the same for every STM32F4 board, which is why it's worth memorizing. The one people get wrong is VCAP: the chip's core runs from an internal 1.2 V regulator, and VCAP is that regulator's output capacitor. Wrong value or high-ESR capacitor and the chip may not start or may not be detected by the debugger. Note the difference: the 100-pin F407 has two VCAP pins, the 64-pin F446 has one. Values come from ST's AN4488 hardware guide.</aside>
+</section>
+
+<!-- 9 Power -->
+<section class="slide" data-title="Power supply" data-board="A + B">
+  <div class="content">
+    <h2>Power: LDO or buck?</h2>
+    <ul class="points">
+      <li>Add up the current: MCU, Ethernet PHY, sensors, LEDs. Then add margin.</li>
+      <li>A linear regulator (LDO) turns the extra voltage into heat.</li>
+    </ul>
+    <div class="formula" style="margin:6px 0 22px">P<sub>heat</sub> = (V<sub>in</sub> − 3.3 V) × I</div>
+    <ul class="points">
+      <li>From a 5 V USB supply an LDO is fine. From a 12 V robot battery, use a buck converter.</li>
+    </ul>
+  </div>
+  <div class="pw">
+    <p class="pw-note" style="margin:0 0 20px">Heat in the regulator for a 3.3 V, 300 mA load</p>
+    <div class="pw-row"><div class="lab">LDO from 5 V <span>(5 − 3.3) × 0.3</span></div><div class="pw-track"><div class="pw-fill cool" style="width:19.5%"></div><span class="pw-val" style="left:calc(19.5% + 12px)">0.51 W</span></div></div>
+    <div class="pw-row"><div class="lab">LDO from 12 V <span>(12 − 3.3) × 0.3</span></div><div class="pw-track"><div class="pw-fill hot" style="width:100%;transition-delay:.2s"></div><span class="pw-val" style="right:12px;color:#fff">2.61 W</span></div></div>
+    <div class="pw-row"><div class="lab">Buck from 12 V <span>about 90% efficient</span></div><div class="pw-track"><div class="pw-fill cool" style="width:4.2%;transition-delay:.4s"></div><span class="pw-val" style="left:calc(4.2% + 12px)">0.11 W</span></div></div>
+    <p class="pw-note">2.6 W is far more than a small LDO package can shed without a large copper area. The buck wastes about a twentieth of that.</p>
+  </div>
+  <aside class="notes">This slide is just arithmetic, which makes it a good one to work through with the room. For Board A on a 12 V robot battery, the LDO option cooks itself. A common pattern is a buck converter down to 3.3 V, or a buck to 5 V followed by a small LDO for a quiet analog rail. Remember the Ethernet PHY draws real current too.</aside>
+</section>
+
+<!-- 10 Interface parts -->
+<section class="slide" data-title="Interface parts" data-board="A + B">
+  <div class="content wide"><h2>Parts that connect the MCU to the world</h2></div>
+  <div class="ifc">
+    <div><h3><span class="tag a">Board A</span>Robot I/O hub</h3><ul>
+      <li><b>Ethernet PHY (RMII)</b>The F407 has the MAC; the PHY does the analog work. Check where its 25 or 50 MHz clock comes from.</li>
+      <li><b>RJ45 jack with built-in magnetics</b>Saves a separate transformer and a lot of board space.</li>
+      <li><b>2 × CAN transceivers</b>Choose 3.3 V parts so they connect straight to the MCU.</li>
+      <li><b>USB connector + ESD protection</b>Anything a person plugs in needs ESD protection.</li>
+      <li><b>Locking sensor connectors</b>Robots vibrate. Use keyed, latching connectors.</li>
+    </ul></div>
+    <div><h3><span class="tag b">Board B</span>Fast control loop</h3><ul>
+      <li><b>Quad-SPI NOR flash</b>3.3 V, quad I/O. Size it for your logs or lookup tables.</li>
+      <li><b>Audio codec or I²S DAC</b>Connects to the SAI. Check the sample rates you need.</li>
+      <li><b>Gate driver + MOSFETs</b>Inputs must accept 3.3 V logic from the timer outputs.</li>
+      <li><b>Current-sense amplifier</b>Feeds the ADC for motor control. Match its output range to the ADC's 0 to 3.3 V.</li>
+      <li><b>USB-C connector + ESD protection</b>Same rule as Board A.</li>
+    </ul></div>
+  </div>
+  <p class="ifc-note">Many STM32F4 pins tolerate 5 V, but not when they're used as analog inputs. Check for "FT" in the datasheet pin table before wiring a 5 V sensor.</p>
+  <aside class="notes">This is where your parts list grows fastest. For each interface part, check three things: it runs at 3.3 V logic, it's in stock, and there's a reference design to copy. For the Ethernet PHY, the clock question links straight into the crystal section.</aside>
+</section>
+
+<!-- 11 Sourcing -->
+<section class="slide" data-title="Stock and assembly" data-board="B" data-steps="2">
+  <div class="content">
+    <h2>Check stock and assembly</h2>
+    <ul class="points">
+      <li>Confirm the part is in stock and active, not "not recommended for new designs".</li>
+      <li>At JLCPCB, Extended parts add a loading fee per part type (about $3 each when this was written). Use Basic parts for passives where you can.</li>
+      <li>Check the footprint against the datasheet's package drawing.</li>
+      <li>Pick packages your team can assemble or rework. LQFP pins are visible and solderable by hand; QFN and BGA are much harder.</li>
+    </ul>
+  </div>
+  <div class="scene">
+    <div class="lib">
+      <div class="lib-h"><span>Library search</span><b>STM32F446RET6</b></div>
+      <table><thead><tr><th>Part</th><th>Footprint</th><th>JLCPCB class</th></tr></thead>
+        <tbody><tr><td class="pn">STM32F446RET6TR</td><td>LQFP-64_L10.0-W10.0-P0.50-LS12.0-BL</td><td class="ext">Extended</td></tr>
+        <tr><td class="pn">STM32F446RET6</td><td>LQFP-64_L10.0-W10.0-P0.50-LS12.0-BL</td><td class="ext">Extended</td></tr></tbody></table>
+    </div>
+    <div class="fpdec">
+      <div class="fp"><span>LQFP-64</span>_<span>L10.0</span>-<span>W10.0</span>-<span>P0.50</span>-<span>LS12.0</span>-BL</div>
+      <dl><dt>LQFP-64</dt><dd>Low-profile quad flat package, 64 pins</dd><dt>L10.0 W10.0</dt><dd>Body is 10.0 × 10.0 mm</dd><dt>P0.50</dt><dd>0.50 mm between pin centers</dd><dt>LS12.0</dt><dd>12.0 mm from pin tip to pin tip</dd></dl>
+    </div>
+  </div>
+  <aside class="notes">These rows are from our own library search. Both versions of the F446 are Extended parts, so we pay the loading fee once for the MCU no matter what. The goal is to avoid adding Extended parts where a Basic one works, especially for resistors and capacitors. Check JLCPCB's current pricing before quoting the fee; it changes.</aside>
+</section>
+
+<!-- 12 Why a crystal -->
+<section class="slide" data-title="Why a crystal" data-board="A + B">
+  <div class="content">
+    <h2>Why add a crystal at all?</h2>
+    <ul class="points">
+      <li>The STM32's internal 16 MHz RC oscillator (HSI) is about 1% accurate. Fine for LEDs and most UART links.</li>
+      <li>USB, Ethernet and a real-time clock need far tighter timing than that.</li>
+      <li><b>HSE</b>: a 4 to 26 MHz crystal that feeds the PLL and system clock.</li>
+      <li><b>LSE</b>: a 32.768 kHz crystal that keeps the RTC on time.</li>
+    </ul>
+  </div>
+  <div class="tol">
+    <p class="pw-note" style="margin:0 0 22px">Clock error in parts per million (log scale). Shorter is tighter.</p>
+    <div class="tol-rows"></div>
+    <div class="tol-axis"></div>
+  </div>
+  <aside class="notes">One percent sounds small until you convert it: that's 10,000 parts per million. USB full speed allows 0.25%, which is 2,500 ppm. An Ethernet PHY wants its clock within 100 ppm. And if you want an RTC that drifts less than a minute a month, you need about 23 ppm. A typical crystal sits at 10 to 30 ppm, which is why every one of these needs a crystal.</aside>
+</section>
+
+<!-- 13 Frequency choice -->
+<section class="slide" data-title="Choosing the frequency" data-board="A + B" data-steps="3">
+  <div class="content wide">
+    <h2>Pick a frequency that divides cleanly</h2>
+    <p class="sub">The PLL turns the crystal into the core clock and USB's exact 48 MHz. 8 MHz and 25 MHz are the usual picks. ST recommends dividing down to 2 MHz first to keep PLL jitter low.</p>
+  </div>
+  <div class="pll"><svg viewBox="0 0 1410 520" aria-hidden="true" id="pllSvg"></svg></div>
+  <aside class="notes">Board A works out neatly: 8 MHz divided by 4 is 2 MHz, times 168 is 336 MHz, divided by 2 gives 168 MHz for the core and divided by 7 gives exactly 48 MHz for USB. Board B at 180 MHz is the interesting one: the main PLL gives 360 MHz, and 360 divided by 7 is 51.4 MHz, which USB won't accept. The F446 has a second PLL, PLLSAI, that can make the 48 MHz on its own. The other option is to run at 168 MHz. Also: 180 MHz requires the regulator's over-drive mode. CubeMX's clock tab does all of this math for you.</aside>
+</section>
+
+<!-- 14 Crystal datasheet -->
+<section class="slide" data-title="Crystal datasheet" data-board="A + B" data-steps="6">
+  <div class="content">
+    <h2>Read the crystal's datasheet</h2>
+    <ul class="params">
+      <li><b>Frequency</b>Pick it from the PLL math on the last slide.</li>
+      <li><b>Load capacitance (C<sub>L</sub>)</b>The capacitance the crystal expects to see. It sets your load capacitors.</li>
+      <li><b>ESR</b>The loss the oscillator has to overcome. Lower starts more easily.</li>
+      <li><b>Shunt capacitance (C<sub>0</sub>)</b>The crystal's own capacitance. Goes into the start-up check.</li>
+      <li><b>Tolerance and stability</b>Error at 25 °C, and drift over temperature, in ppm.</li>
+      <li><b>Drive level</b>Maximum power. Small crystals are easy to overdrive.</li>
+    </ul>
+  </div>
+  <div class="dsheet">
+    <div class="dh"><b>8 MHz crystal, 3.2 × 2.5 mm</b><span>Example values</span></div>
+    <table>
+      <tr class="r1"><td>Nominal frequency</td><td>8.000 MHz</td></tr>
+      <tr class="r2"><td>Load capacitance C<sub>L</sub></td><td>20 pF</td></tr>
+      <tr class="r3"><td>ESR, max</td><td>80 Ω</td></tr>
+      <tr class="r4"><td>Shunt capacitance C<sub>0</sub>, max</td><td>3 pF</td></tr>
+      <tr class="r5"><td>Tolerance / stability</td><td>±20 ppm / ±30 ppm</td></tr>
+      <tr class="r6"><td>Drive level, max</td><td>100 µW</td></tr>
+    </table>
+    <div class="foot">Illustrative numbers. Use the datasheet for the part you actually buy.</div>
+  </div>
+  <aside class="notes">Click through each line. These six numbers are everything you need for the next three slides. Students often grab a crystal by frequency alone; the load capacitance and ESR decide whether it starts and how accurate it is.</aside>
+</section>
+
+<!-- 15 Gain margin -->
+<section class="slide" data-title="Will it start" data-board="A + B" data-steps="3">
+  <div class="content" style="width:680px">
+    <h2>Will it start?</h2>
+    <div class="gm-formula">gm<sub>crit</sub> = 4 × ESR × (2πF)² × (C<sub>0</sub> + C<sub>L</sub>)²<small>The oscillator must be at least 5 times stronger than this. So gm<sub>crit</sub> must stay under the MCU's limit:</small></div>
+    <table class="limits">
+      <thead><tr><th>Oscillator</th><th>Limit (Gm<sub>crit_max</sub>)</th></tr></thead>
+      <tr><td>HSE, F407 and F446</td><td>1 mA/V</td></tr>
+      <tr><td>LSE, F407</td><td>0.56 µA/V</td></tr>
+      <tr><td>LSE, F446 low drive / high drive</td><td>0.56 / 1.5 µA/V</td></tr>
+    </table>
+  </div>
+  <div class="work">
+    <h3>Example: the 8 MHz crystal</h3>
+    <div class="ln" data-step="1">ESR 80 Ω, F 8 MHz, C<sub>0</sub> 3 pF, C<sub>L</sub> 20 pF</div>
+    <div class="ln" data-step="2">4 × 80 × (2π × 8×10⁶)² × (23×10⁻¹²)² = <b>0.43 mA/V</b></div>
+    <div class="res" data-step="3">0.43 mA/V is under the 1 mA/V limit. Gain margin is about 12, so it starts reliably.</div>
+  </div>
+  <aside class="notes">This formula is from ST's oscillator design guide, AN2867. gm critical is how much gain the crystal needs; the MCU's oscillator has a minimum gain, and we want at least five times what's needed. The limits are that minimum divided by five. The LSE limit is tiny, which is why 32.768 kHz crystals cause so much trouble; the calculator two slides on shows a real example.</aside>
+</section>
+
+<!-- 16 Load caps -->
+<section class="slide" data-title="Load capacitors" data-board="A + B" data-steps="1">
+  <div class="content">
+    <h2>Size the load capacitors</h2>
+    <div class="formula" style="font-size:26px;margin-bottom:22px">C<sub>L</sub> = (C1 × C2) ÷ (C1 + C2) + C<sub>stray</sub></div>
+    <ul class="points">
+      <li>With equal capacitors: <b>C1 = C2 = 2 × (C<sub>L</sub> − C<sub>stray</sub>)</b></li>
+      <li>C<sub>stray</sub> is the pins plus the traces: a few pF. ST's own example uses 5 pF.</li>
+      <li>Use C0G (NP0) capacitors. Their value doesn't drift with temperature or voltage.</li>
+      <li class="aside">Common mistake: 20 pF capacitors on a 20 pF crystal. The crystal then sees only about 15 pF and runs slightly fast.</li>
+    </ul>
+  </div>
+  <div class="lc-scene"><svg viewBox="0 0 700 520" aria-hidden="true">
+    <g class="sym"><rect class="fill" x="560" y="60" width="120" height="400" rx="4"/><path d="M560 160 H520 M560 360 H520"/></g>
+    <text class="svgt" x="568" y="166">OSC_IN</text><text class="svgt" x="568" y="366">OSC_OUT</text>
+    <g class="sym"><path d="M520 160 H300 V214 M276 214 H324 M300 286 V360 H520 M276 286 H324"/><rect class="fill" x="284" y="222" width="32" height="56"/></g>
+    <text class="svgt" x="340" y="256">Crystal</text>
+    <g class="sym"><path d="M300 160 H140 V214 M116 214 H164 M116 226 H164 M140 226 V270 M300 360 H140 V314 M116 314 H164 M116 302 H164 M140 302 V270"/></g>
+    <g class="gnd"><path d="M126 270 H154 M131 277 H149 M136 284 H144" transform="translate(-60 0)"/><path d="M140 270 H80"/></g>
+    <text class="svgt" x="172" y="226">C1</text><text class="svgt" x="172" y="318">C2</text>
+    <g class="ghost sym"><path d="M440 160 V196 M426 196 H454 M426 206 H454 M440 206 V232 M440 360 V324 M426 324 H454 M426 314 H454 M440 314 V288"/></g>
+    <text class="svgt s" x="456" y="250">C<tspan baseline-shift="sub" font-size="12">stray</tspan></text>
+    <g class="vv"><text class="v" x="40" y="130">C<tspan baseline-shift="sub" font-size="14">L</tspan> 20 pF, C<tspan baseline-shift="sub" font-size="14">stray</tspan> 5 pF</text>
+    <text class="v" x="40" y="440">C1 = C2 = 2 × (20 − 5) = 30 pF</text></g>
+  </svg></div>
+  <aside class="notes">The two capacitors are in series as far as the crystal is concerned, which is why you double the number. Stray capacitance is a guess on a new board; a few picofarads is typical, and ST uses 5 pF in its example. If the measured frequency is off, adjust these capacitors on the next revision.</aside>
+</section>
+
+<!-- 17 Calculator -->
+<section class="slide" data-title="Crystal calculator" data-board="A + B">
+  <div class="content wide"><h2>Try it: crystal check</h2></div>
+  <div class="calc">
+    <form class="calc-in" onsubmit="return false" autocomplete="off">
+      <div class="presets" role="group" aria-label="Example crystals">
+        <button type="button" data-p="hse8">8 MHz, C<sub>L</sub> 20 pF</button>
+        <button type="button" data-p="hse25hi">25 MHz, C<sub>L</sub> 18 pF</button>
+        <button type="button" data-p="hse25lo">25 MHz, C<sub>L</sub> 10 pF</button>
+        <button type="button" data-p="lse125">32.768 kHz, C<sub>L</sub> 12.5 pF</button>
+        <button type="button" data-p="lse6">32.768 kHz, C<sub>L</sub> 6 pF</button>
+      </div>
+      <div class="fld"><label for="c-osc">Oscillator</label><select id="c-osc">
+        <option value="5e-3">HSE, F407 or F446 (gm 5 mA/V)</option>
+        <option value="2.8e-6">LSE, F407 (gm 2.8 µA/V)</option>
+        <option value="2.8e-6_">LSE, F446 low drive (2.8 µA/V)</option>
+        <option value="7.5e-6">LSE, F446 high drive (7.5 µA/V)</option></select></div>
+      <div class="fld"><label for="c-f">Frequency</label><div class="in"><input id="c-f" type="number" step="any" min="0"><select id="c-fu"><option value="1e6">MHz</option><option value="1e3">kHz</option></select></div></div>
+      <div class="fld"><label for="c-esr">ESR, max</label><div class="in"><input id="c-esr" type="number" step="any" min="0"><select id="c-eu"><option value="1">Ω</option><option value="1e3">kΩ</option></select></div></div>
+      <div class="fld"><label for="c-c0">C<sub>0</sub><span>shunt capacitance</span></label><div class="in"><input id="c-c0" type="number" step="any" min="0"><span class="unit">pF</span></div></div>
+      <div class="fld"><label for="c-cl">C<sub>L</sub><span>load capacitance</span></label><div class="in"><input id="c-cl" type="number" step="any" min="0"><span class="unit">pF</span></div></div>
+      <div class="fld" style="margin-bottom:0"><label for="c-cs">C<sub>stray</sub><span>pins + traces</span></label><div class="in"><input id="c-cs" type="number" step="any" min="0"><span class="unit">pF</span></div></div>
+    </form>
+    <div class="calc-out" aria-live="polite">
+      <div class="verdict" id="c-verdict"><div class="big"></div><p></p></div>
+      <div class="nums">
+        <div class="num"><span>gm<sub>crit</sub> of this crystal</span><b id="c-gm"></b><small id="c-lim"></small></div>
+        <div class="num"><span>Gain margin</span><b id="c-margin"></b><small>Needs to be 5 or more</small></div>
+        <div class="num" style="grid-column:1/-1"><span>Load capacitors, each</span><b id="c-caps"></b><small id="c-std"></small></div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">Use the presets live. The 8 MHz crystal passes easily. The 25 MHz one with 18 pF load fails on an F4; the same frequency with a 10 pF load passes. The big lesson is the 32.768 kHz pair: the common 12.5 pF watch crystal fails on the F407's LSE, and even the F446's high-drive mode can't rescue it. A low-ESR 6 pF crystal passes. Example values only; type in your real crystal's datasheet numbers.</aside>
+</section>
+
+<!-- 18 Layout -->
+<section class="slide dark" data-title="Crystal layout" data-board="A + B" data-steps="2">
+  <div class="content">
+    <h2>Lay out the crystal carefully</h2>
+    <ul class="points">
+      <li>Put the crystal and both capacitors right next to OSC_IN and OSC_OUT.</li>
+      <li>Keep both traces short, about equal, and free of vias.</li>
+      <li>Ground the capacitors together, close to the MCU's VSS pin.</li>
+      <li>Surround the oscillator with a ground guard ring. Route nothing underneath it.</li>
+      <li>Keep motor drivers, switching regulators and fast buses well away.</li>
+    </ul>
+  </div>
+  <div class="lay">
+    <figure class="do"><figcaption><i></i>Do</figcaption><svg viewBox="0 0 360 400" id="layDo"></svg><div class="notes-l">Tight loop, guard ring, quiet area.</div></figure>
+    <figure class="avoid"><figcaption><i></i>Avoid</figcaption><svg viewBox="0 0 360 400" id="layAvoid"></svg><div class="notes-l">Long traces, a via, and a signal running under the crystal.</div></figure>
+  </div>
+  <aside class="notes">The oscillator is a tiny-signal, high-impedance circuit, so it picks up noise easily and stray capacitance shifts its frequency. On Board B, keep the crystal on the opposite side of the board from the motor's power stage. These guidelines follow the layout section of ST's AN2867.</aside>
+</section>
+
+<!-- 19 Crystal vs oscillator -->
+<section class="slide" data-title="Crystal or oscillator" data-board="A + B">
+  <div class="content wide"><h2>Crystal, oscillator or resonator?</h2></div>
+  <table class="cmp">
+    <thead><tr><th></th><th>Passive crystal</th><th>Active oscillator</th><th>Ceramic resonator</th></tr></thead>
+    <tbody>
+      <tr><td>Accuracy</td><td>About ±10 to ±50 ppm</td><td>About ±10 to ±50 ppm</td><td>About ±0.5%: too loose for USB</td></tr>
+      <tr><td>Extra parts</td><td>Two load capacitors</td><td>A supply decoupling capacitor</td><td>Often none; caps are built in</td></tr>
+      <tr><td>STM32 setting</td><td>HSE crystal mode</td><td>HSE bypass: the clock goes into OSC_IN</td><td>HSE crystal mode</td></tr>
+      <tr><td>Cost and power</td><td>Lowest</td><td>Higher; draws a few mA</td><td>Low</td></tr>
+      <tr><td>Best for</td><td>Most boards</td><td>Noisy boards, or one clock shared by several chips</td><td>Cost-sensitive boards without USB or Ethernet</td></tr>
+    </tbody>
+  </table>
+  <aside class="notes">For Board B next to a motor power stage, an active oscillator is worth discussing: it's much less sensitive to noise and needs no gain-margin check. For Board A, one clock could serve both the MCU and the Ethernet PHY. A passive crystal is still the default for most boards because it's cheap and simple.</aside>
+</section>
+
+<!-- 20 Parts A -->
+<section class="slide" data-title="Board A parts list" data-board="A">
+  <div class="content wide"><h2><span class="tag a" style="font-size:24px;padding:7px 12px">Board A</span>Parts list</h2></div>
+  <table class="plist" data-board-list="A"></table>
+  <aside class="notes">The "What to look for" column is the spec from this talk. Fill in the chosen part and LCSC number as decisions are made. To update this slide, edit the PARTS list near the top of the script in mcu-parts.html.</aside>
+</section>
+
+<!-- 21 Parts B -->
+<section class="slide" data-title="Board B parts list" data-board="B">
+  <div class="content wide"><h2><span class="tag b" style="font-size:24px;padding:7px 12px">Board B</span>Parts list</h2></div>
+  <table class="plist" data-board-list="B"></table>
+  <aside class="notes">Same format as Board A. The MCU row is already filled from our library search: STM32F446RET6, LQFP-64, an Extended part at JLCPCB.</aside>
+</section>
+
+<!-- 22 Questions -->
+<section class="slide" data-title="Discussion" data-board="A + B">
+  <div class="content wide"><h2>Questions to work through together</h2></div>
+  <div class="qs">
+    <div><h3><span class="tag a">Board A</span></h3><ol>
+      <li>Does the Ethernet PHY get its own crystal, or a clock from the MCU?</li>
+      <li>79 of 82 pins is tight. What would we give up to keep spares?</li>
+      <li>Will any 5 V sensor ever reach an analog pin?</li></ol></div>
+    <div><h3><span class="tag b">Board B</span></h3><ol>
+      <li>180 MHz with PLLSAI for USB, or 168 MHz and a simpler clock tree?</li>
+      <li>Crystal or active oscillator next to the motor's power stage?</li>
+      <li>How much Quad-SPI flash do the logs really need?</li></ol></div>
+    <div><h3><span class="tag ab">Both</span></h3><ol>
+      <li>Which Extended parts could become Basic parts?</li>
+      <li>Do we need the RTC, and so the 32.768 kHz crystal, at all?</li>
+      <li>Who assembles the board: JLCPCB's machines or us by hand?</li></ol></div>
+  </div>
+  <aside class="notes">Pick two or three of these depending on time. There's no single right answer to any of them; the point is to make the trade-off on purpose.</aside>
+</section>
+
+<!-- 23 Sources -->
+<section class="slide" data-title="Sources" data-board="A + B">
+  <div class="content wide">
+    <h2>Where these numbers come from</h2>
+    <ul class="res">
+      <li><a href="https://www.st.com/en/microcontrollers-microprocessors/stm32f407vg.html" target="_blank" rel="noopener">STM32F407VG product page and datasheet</a>Core, memory, peripherals and the 4 to 26 MHz HSE range.</li>
+      <li><a href="https://www.st.com/en/microcontrollers-microprocessors/stm32f446re.html" target="_blank" rel="noopener">STM32F446RE product page and datasheet</a>180 MHz core, Quad-SPI, SAI and peripherals.</li>
+      <li><a href="https://www.st.com/resource/en/application_note/an2867-oscillator-design-guide-for-stm32-microcontrollers-stmicroelectronics.pdf" target="_blank" rel="noopener">AN2867: Oscillator design guide for STM32</a>gm<sub>crit</sub>, gain margin, load capacitors, oscillator limits per series.</li>
+      <li><a href="https://www.st.com/resource/en/application_note/an4488-getting-started-with-stm32f4xxxx-mcu-hardware-development-stmicroelectronics.pdf" target="_blank" rel="noopener">AN4488: Getting started with STM32F4 hardware</a>Decoupling, VCAP, reset, boot and debug.</li>
+      <li><a href="https://www.st.com/en/development-tools/stm32cubemx.html" target="_blank" rel="noopener">STM32CubeMX</a>Pinout and clock-tree configuration.</li>
+    </ul>
+  </div>
+  <aside class="notes">Every value in this deck traces back to one of these documents. When in doubt, the datasheet for the exact part number wins.</aside>
+</section>
+
+</div></div>
+
+<div id="notes"><h5></h5><div class="body"></div></div>
+<div id="help"><kbd>→</kbd> <kbd>Space</kbd> next &nbsp; <kbd>←</kbd> back &nbsp; <kbd>N</kbd> notes &nbsp; <kbd>F</kbd> full screen &nbsp; <kbd>Home</kbd> <kbd>End</kbd> first and last</div>
+<nav id="navbtns" aria-label="Slide navigation"><button id="prev" aria-label="Previous">‹</button><button id="next" aria-label="Next">›</button><button id="helpbtn" aria-label="Keyboard help">?</button></nav>
+
+<script>
+/* =====================================================================
+   EDIT HERE: parts lists and pin budgets for the two boards.
+   Leave "part" empty ("") for anything not chosen yet; the slide shows
+   it as "To pick". class is "Basic", "Extended" or "".
+   ===================================================================== */
+const PARTS = {
+  A: [
+    {role:'Microcontroller', look:'STM32F407VGT6, LQFP-100', part:'STM32F407VGT6', lcsc:'', cls:''},
+    {role:'3.3 V regulator', look:'Buck if fed from a 12 V battery; current for MCU + PHY + sensors with margin', part:'', lcsc:'', cls:''},
+    {role:'HSE crystal', look:'8 or 25 MHz, low ESR, gm<sub>crit</sub> under 1 mA/V', part:'', lcsc:'', cls:''},
+    {role:'HSE load caps ×2', look:'2 × (C<sub>L</sub> − C<sub>stray</sub>), C0G', part:'', lcsc:'', cls:''},
+    {role:'LSE crystal', look:'32.768 kHz, about 6 pF C<sub>L</sub>, low ESR, gm<sub>crit</sub> under 0.56 µA/V', part:'', lcsc:'', cls:''},
+    {role:'VCAP caps', look:'2 × 2.2 µF ceramic, ESR under 2 Ω', part:'', lcsc:'', cls:''},
+    {role:'Decoupling', look:'100 nF per VDD pin + 4.7–10 µF; VDDA 100 nF + 1 µF', part:'', lcsc:'', cls:''},
+    {role:'Ethernet PHY', look:'RMII, 3.3 V; check its clock source', part:'', lcsc:'', cls:''},
+    {role:'RJ45 jack', look:'Built-in magnetics', part:'', lcsc:'', cls:''},
+    {role:'CAN transceiver ×2', look:'3.3 V supply', part:'', lcsc:'', cls:''},
+    {role:'USB connector + ESD', look:'Connector plus ESD array', part:'', lcsc:'', cls:''},
+    {role:'Debug header', look:'SWD: SWDIO, SWCLK, NRST, 3.3 V, GND', part:'', lcsc:'', cls:''}
+  ],
+  B: [
+    {role:'Microcontroller', look:'STM32F446RET6, LQFP-64', part:'STM32F446RET6', lcsc:'', cls:'Extended'},
+    {role:'3.3 V regulator', look:'Buck from the flight or motor battery', part:'', lcsc:'', cls:''},
+    {role:'HSE crystal', look:'8 MHz (PLLSAI makes 48 MHz for USB at 180 MHz)', part:'', lcsc:'', cls:''},
+    {role:'HSE load caps ×2', look:'2 × (C<sub>L</sub> − C<sub>stray</sub>), C0G', part:'', lcsc:'', cls:''},
+    {role:'LSE crystal', look:'Only if the RTC is used; low-ESR, about 6 pF C<sub>L</sub>', part:'', lcsc:'', cls:''},
+    {role:'VCAP cap', look:'1 × 4.7 µF ceramic, ESR under 1 Ω', part:'', lcsc:'', cls:''},
+    {role:'Decoupling', look:'100 nF per VDD pin + 4.7–10 µF; VDDA 100 nF + 1 µF', part:'', lcsc:'', cls:''},
+    {role:'Quad-SPI flash', look:'3.3 V NOR, quad I/O, sized for logs', part:'', lcsc:'', cls:''},
+    {role:'Audio codec / DAC', look:'I²S/SAI input, the sample rates you need', part:'', lcsc:'', cls:''},
+    {role:'Gate driver', look:'Accepts 3.3 V logic inputs', part:'', lcsc:'', cls:''},
+    {role:'USB-C + ESD', look:'Connector plus ESD array', part:'', lcsc:'', cls:''},
+    {role:'Debug header', look:'SWD: SWDIO, SWCLK, NRST, 3.3 V, GND', part:'', lcsc:'', cls:''}
+  ]
+};
+const PINS = {
+  A: {cap:82, pkg:'LQFP-100', list:[['Ethernet RMII',9],['CAN ×2',4],['USB',2],['I²C ×3',6],['SPI ×2 + 4 chip selects',10],['UART ×3',6],['PWM outputs',12],['Encoder inputs',4],['ADC inputs',10],['SWD + both crystals',6],['LEDs, buttons, interrupts',10]]},
+  B: {cap:50, pkg:'LQFP-64', list:[['Quad-SPI flash',6],['SAI audio',4],['USB',2],['Motor PWM + break',7],['Hall sensors',3],['Current sense (ADC)',3],['IMU on SPI + interrupt',5],['UART',2],['CAN',2],['SWD + both crystals',6],['LEDs, buttons',4]]}
+};
+/* ===================================================================== */
+
+(function(){
+"use strict";
+const deck=document.getElementById('deck');
+const slides=[...deck.querySelectorAll('.slide')];
+const REDUCE=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function fit(){const s=Math.min(innerWidth/1600,innerHeight/900);deck.style.transform='scale('+s+')';}
+addEventListener('resize',fit);fit();
+
+/* frame + title block */
+function frameSVG(){
+  let t='';
+  for(let i=0;i<8;i++){const x=44+189*(i+.5);t+=`<text x="${x}" y="34">${i+1}</text><text x="${x}" y="866">${i+1}</text>`;
+    if(i){const xl=44+189*i;t+=`<line x1="${xl}" y1="24" x2="${xl}" y2="44"/><line x1="${xl}" y1="856" x2="${xl}" y2="876"/>`;}}
+  const L='ABCD';
+  for(let j=0;j<4;j++){const y=44+203*(j+.5);t+=`<text x="34" y="${y}">${L[j]}</text><text x="1566" y="${y}">${L[j]}</text>`;
+    if(j){const yl=44+203*j;t+=`<line x1="24" y1="${yl}" x2="44" y2="${yl}"/><line x1="1556" y1="${yl}" x2="1576" y2="${yl}"/>`;}}
+  return `<svg class="frame" viewBox="0 0 1600 900" aria-hidden="true"><rect class="outer" x="24" y="24" width="1552" height="852"/><rect x="44" y="44" width="1512" height="812"/>${t}</svg>`;
+}
+slides.forEach((s,i)=>{
+  s.insertAdjacentHTML('afterbegin',frameSVG());
+  s.insertAdjacentHTML('beforeend',`<div class="tblock" aria-hidden="true"><div class="tb-course">Custom STM32 boards: picking parts<span>Rev A</span></div><div class="tb-title"><span>Title</span><b>${s.dataset.title}</b></div><div><span>Board</span><b>${s.dataset.board}</b></div><div><span>Sheet</span><b>${i+1} of ${slides.length}</b></div></div>`);
+});
+
+/* chip drawing: n pins per side */
+function chipSVG(o){
+  const {x,y,size,n,lead,pinW,label,label2,pinClass}=o;
+  const pitch=size/(n+1);let p='';let k=0;
+  const pc=pinClass||(()=> 'pin');
+  for(let side=0;side<4;side++){for(let i=0;i<n;i++){
+    const t=pitch*(i+1);let r;
+    if(side===0)r=[x-lead,y+t-pinW/2,lead,pinW];          // left, top to bottom
+    else if(side===1)r=[x+t-pinW/2,y+size,pinW,lead];      // bottom, left to right
+    else if(side===2)r=[x+size,y+size-t-pinW/2,lead,pinW]; // right, bottom to top
+    else r=[x+size-t-pinW/2,y-lead,pinW,lead];             // top, right to left
+    p+=`<rect class="${pc(k)}" data-k="${k}" x="${r[0].toFixed(1)}" y="${r[1].toFixed(1)}" width="${r[2].toFixed(1)}" height="${r[3].toFixed(1)}" style="animation-delay:${(k*0.012).toFixed(3)}s"/>`;k++;}}
+  const d=Math.max(4,size*0.025);
+  return `<g class="chip"><rect class="body" x="${x}" y="${y}" width="${size}" height="${size}" rx="${size*0.02}"/><circle class="dot1" cx="${x+size*0.09}" cy="${y+size*0.09}" r="${d}"/>${p}${label?`<text class="lbl" x="${x+size/2}" y="${y+size/2}" style="font-size:${size*0.14}px">${label}</text>`:''}${label2?`<text class="lbl2" x="${x+size/2}" y="${y+size/2+size*0.1}" style="font-size:${size*0.065}px">${label2}</text>`:''}</g>`;
+}
+function pinXY(o,k){const pitch=o.size/(o.n+1),side=Math.floor(k/o.n),i=k%o.n,t=pitch*(i+1);
+  if(side===0)return[o.x-o.lead,o.y+t];if(side===1)return[o.x+t,o.y+o.size+o.lead];if(side===2)return[o.x+o.size+o.lead,o.y+o.size-t];return[o.x+o.size-t,o.y-o.lead];}
+
+/* title chip: LQFP-64 with crystal on pins 5/6 (OSC_IN / OSC_OUT) */
+(function(){
+  const o={x:300,y:110,size:320,n:16,lead:24,pinW:9,label:'STM32',label2:'F446RET6'};
+  const [ix,iy]=pinXY(o,4),[ox,oy]=pinXY(o,5);
+  const xc=150;
+  let s=chipSVG(o);
+  s+=`<path class="wire" pathLength="1" d="M${ix} ${iy} H${xc+60} V170 H${xc}"/><path class="wire" pathLength="1" d="M${ox} ${oy} H${xc+80} V300 H${xc}"/>`;
+  s+=`<g class="xt"><g class="sym"><path d="M${xc} 170 V218 M${xc-18} 218 H${xc+18} M${xc-18} 252 H${xc+18} M${xc} 252 V300"/><rect class="fill" x="${xc-12}" y="224" width="24" height="22"/>
+    <path d="M${xc} 170 H70 V190 M54 190 H86 M54 200 H86 M70 200 V222 M${xc} 300 H70 V320 M54 320 H86 M54 330 H86 M70 330 V352"/></g>
+    <g class="gnd"><path d="M58 222 H82 M62 228 H78 M66 234 H74 M58 352 H82 M62 358 H78 M66 364 H74"/></g>
+    <text class="svgt" x="${xc+26}" y="241">8 MHz</text><text class="svgt s" x="96" y="200">C1</text><text class="svgt s" x="96" y="330">C2</text>
+    <text class="svgt s" x="${o.x+10}" y="${iy+5}">OSC_IN</text><text class="svgt s" x="${o.x+10}" y="${oy+5}">OSC_OUT</text></g>`;
+  document.getElementById('titleChip').innerHTML=s;
+})();
+
+/* packages to scale: 10 px per mm */
+document.querySelector('.pkgA').innerHTML=chipSVG({x:25,y:10,size:140,n:25,lead:10,pinW:2.6,label:'F407'})+'<text class="scale" x="95" y="200">LQFP-100, 14 mm body</text><text class="scale" x="95" y="218">drawn to scale</text>';
+document.querySelector('.pkgB').innerHTML=chipSVG({x:45,y:30,size:100,n:16,lead:10,pinW:2.6,label:'F446'})+'<text class="scale" x="95" y="200">LQFP-64, 10 mm body</text><text class="scale" x="95" y="218">drawn to scale</text>';
+
+/* method roadmap */
+(function(){
+  const names=['Write the requirements','Count interfaces and pins','Choose MCU and package','Lock the pinout','Add the support circuit','Choose the crystal','Pick interface parts','Check stock and assembly'];
+  const host=document.querySelector('.road');let h='';
+  names.forEach((n,i)=>{const x=170+i*180,d=(0.2+i*0.27).toFixed(2),c=i===5?' xtal':'';
+    h+=`<div class="road-pad${c}" style="left:${x}px;animation-delay:${d}s">${i+1}</div><div class="road-lab" style="left:${x}px;animation-delay:${(+d+.12).toFixed(2)}s">${n}</div>`;});
+  host.innerHTML=h;
+})();
+
+/* pin budget */
+(function(){
+  const host=document.querySelector('.budget');const W=1410,per=W/90;let h='';
+  ['A','B'].forEach((b,bi)=>{const P=PINS[b];const used=P.list.reduce((a,x)=>a+x[1],0);
+    let segs='',x=0;P.list.forEach((it,i)=>{const w=it[1]*per;segs+=`<div class="seg" style="left:${x}px;width:${w}px;animation-delay:${(i*0.11).toFixed(2)}s" title="${esc(it[0])}">${w>58?it[1]:''}</div>`;x+=w;});
+    const mark=b==='A'?`<div class="mark" style="left:${50*per}px"><span>A 64-pin part would stop here (50 GPIOs)</span></div>`:'';
+    h+=`<div class="bud" data-step="${bi+1}"><div class="bud-h"><span class="tag ${b.toLowerCase()}">Board ${b}</span><span class="tot">${used} of ${P.cap} GPIOs</span><span class="cap">${P.pkg}, ${P.cap-used} spare</span></div>
+      <div class="bar ${b.toLowerCase()}" style="width:${P.cap*per}px">${segs}${mark}</div>
+      <div class="legend">${P.list.map(it=>`<div><b>${it[1]}</b>${esc(it[0])}</div>`).join('')}</div></div>`;});
+  host.innerHTML=h;
+})();
+
+/* part-number decoding */
+(function(){
+  const rows=[
+    {c:'a',segs:[['STM32','Family','Arm Cortex-M MCU'],['F','Type','General purpose'],['407','Line','F4 with Ethernet'],['V','Pins','100'],['G','Flash','1 MB'],['T','Package','LQFP'],['6','Temperature','−40 to 85 °C']]},
+    {c:'b',segs:[['STM32','Family','Arm Cortex-M MCU'],['F','Type','General purpose'],['446','Line','F4 with Quad-SPI, SAI'],['R','Pins','64'],['E','Flash','512 KB'],['T','Package','LQFP'],['6','Temperature','−40 to 85 °C'],['TR','Packing','Tape and reel','opt']]}
+  ];
+  let h='';rows.forEach((r,ri)=>{h+=`<div class="pnrow ${r.c}">`+r.segs.map((s,i)=>`<div class="seg${s[3]?' '+s[3]:''}${i%2?' r2':''}" style="animation-delay:${(ri*0.5+i*0.09).toFixed(2)}s"><div class="ch">${s[0]}</div><div class="ex">${s[1]}<span>${s[2]}</span></div></div>`).join('')+'</div>';});
+  h+=`<p class="decode-note">STM32F446RET6 and STM32F446RET6TR are the same chip. The TR suffix only says it ships on a reel for pick-and-place machines.</p>`;
+  document.querySelector('.decode').innerHTML=h;
+})();
+
+/* CubeMX chip with colored pin functions (illustrative) */
+(function(){
+  const o={x:200,y:90,size:330,n:16,lead:26,pinW:10,label:'STM32',label2:'LQFP-64'};
+  const fn={qspi:[18,19,20,21,22,23],sai:[40,41,42,43],usb:[44,45],pwm:[24,25,26,27,28,29,30],swd:[46,49],osc:[2,3,4,5],adc:[8,9,10],spi:[33,34,35,36]};
+  const col={qspi:'#8B3FB5',sai:'#0F8C7E',usb:'#1D5DBF',pwm:'#E08A1E',swd:'#5B6773',osc:'#D4A017',adc:'#2F9E5C',spi:'#C2416B'};
+  const map={};for(const f in fn)fn[f].forEach(k=>map[k]=f);
+  const conflict=36;
+  let s=chipSVG(Object.assign({},o,{pinClass:k=>'pin'+(map[k]?' f-'+map[k]:'')+(k===conflict?' conflict':'')}));
+  let css='';for(const f in col)css+=`.s1 #cubeChip .f-${f}{fill:${col[f]}}`;
+  css+=`#cubeChip .pin{transition:fill .4s}.s2 #cubeChip .conflict{animation:blink .7s steps(1) infinite}@keyframes blink{50%{fill:#D93B2F}}`;
+  const names={qspi:'Quad-SPI',sai:'SAI audio',usb:'USB',pwm:'Motor PWM',swd:'SWD',osc:'Crystals',adc:'ADC',spi:'SPI'};
+  let lg='',i=0;for(const f in col){const lx=40+(i%4)*170,ly=520+Math.floor(i/4)*34;lg+=`<rect x="${lx}" y="${ly-13}" width="16" height="16" rx="3" fill="${col[f]}"/><text class="svgt s" x="${lx+24}" y="${ly}">${names[f]}</text>`;i++;}
+  const [cx,cy]=pinXY(o,conflict);
+  s+=`<g class="cflag" style="opacity:0"><path d="M${cx+4} ${cy} H${cx+40}" stroke="#D93B2F" stroke-width="2.5"/><text class="svgt" x="${cx+46}" y="${cy-8}" fill="#D93B2F" style="fill:#D93B2F">Conflict:</text><text class="svgt s" x="${cx+46}" y="${cy+14}">two peripherals,</text><text class="svgt s" x="${cx+46}" y="${cy+32}">one pin</text></g>`;
+  css+=`.s2 #cubeChip .cflag{opacity:1!important;transition:opacity .4s}#cubeChip .cflag{transition:opacity .3s}`;
+  const el=document.getElementById('cubeChip');el.innerHTML=`<style>${css}</style>`+s+`<g class="lg">${lg}</g>`;
+})();
+
+/* tolerance chart (log scale 1..100,000 ppm) */
+(function(){
+  const rows=[
+    ['Internal RC (HSI)','about 1%',10000,'bad'],
+    ['USB full speed','needs ±0.25%',2500,'need'],
+    ['Ethernet PHY clock','needs ±100 ppm',100,'need'],
+    ['RTC: 1 min a month','needs ±23 ppm',23,'need'],
+    ['Typical crystal','±10 to ±30 ppm',30,'have']];
+  const pos=v=>Math.log10(v)/5*100;
+  document.querySelector('.tol-rows').innerHTML=rows.map((r,i)=>`<div class="tol-row"><div class="nm">${r[0]}<span>${r[1]}</span></div><div class="tol-track"><div class="tol-bar ${r[3]}" style="width:${pos(r[2])}%;transition-delay:${(i*0.15).toFixed(2)}s"><b>${r[2].toLocaleString('en-US')} ppm</b></div></div></div>`).join('');
+  document.querySelector('.tol-axis').innerHTML=[1,10,100,1000,10000,100000].map(v=>`<span style="left:${pos(v)}%">${v.toLocaleString('en-US')}</span>`).join('');
+})();
+
+/* PLL diagram */
+(function(){
+  const bx=(x,y,w,t1,t2,cls)=>`<rect class="bx ${cls||''}" x="${x}" y="${y}" width="${w}" height="68" rx="6"/><text class="bt" x="${x+w/2}" y="${y+(t2?32:42)}">${t1}</text>${t2?`<text class="bt2" x="${x+w/2}" y="${y+56}">${t2}</text>`:''}`;
+  const ar=(d,lx,ly,l)=>`<path class="ar" d="${d}"/><text class="al" x="${lx}" y="${ly}">${l}</text>`;
+  const C=[0,290,580,900],W=[200,200,200,330];
+  function row(y,tag,tagc,n,vco,core,coreSub,q,qok){
+    return `<text class="rowlab" x="0" y="${y-14}" fill="${tagc}" style="fill:${tagc}">${tag}</text>`+
+      bx(C[0],y,W[0],'8 MHz','HSE crystal')+ar(`M${C[0]+W[0]} ${y+34} H${C[1]-6}`,(C[0]+W[0]+C[1])/2,y+24,'÷ 4')+
+      bx(C[1],y,W[1],'2 MHz','PLL input')+ar(`M${C[1]+W[1]} ${y+34} H${C[2]-6}`,(C[1]+W[1]+C[2])/2,y+24,'× '+n)+
+      bx(C[2],y,W[2],vco+' MHz','PLL VCO')+ar(`M${C[2]+W[2]} ${y+34} H${C[3]-6}`,(C[2]+W[2]+C[3])/2,y+24,'÷ 2')+
+      bx(C[3],y,W[3],core,coreSub,'ok')+
+      ar(`M${C[2]+W[2]/2} ${y+68} V${y+124} H${C[3]-6}`,(C[2]+W[2]+C[3])/2+20,y+114,'÷ 7')+
+      bx(C[3],y+90,W[3],q,qok?'USB clock ✓':'not 48 MHz: USB won’t work ✗',qok?'ok':'bad');
+  }
+  let s=`<defs><marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#44525F"/></marker></defs>`;
+  s+=`<g class="g g1">${row(26,'Board A: STM32F407 at 168 MHz','#123D7E','168','336','168 MHz core ✓','',' 48 MHz',true)}</g>`;
+  s+=`<g class="g g2">${row(270,'Board B: STM32F446 at 180 MHz','#5B2180','180','360','180 MHz core ✓','needs over-drive mode','51.4 MHz',false)}</g>`;
+  s+=`<g class="g g3">`+ar(`M${C[1]+W[1]/2} ${270+68} V${270+226} H${C[2]-6}`,C[1]+W[1]/2+120,270+216,'× 96')+bx(C[2],270+192,W[2],'192 MHz','PLLSAI VCO')+ar(`M${C[2]+W[2]} ${270+226} H${C[3]-6}`,(C[2]+W[2]+C[3])/2,270+216,'÷ 4')+bx(C[3],270+192,W[3],'48 MHz','USB clock from PLLSAI ✓','ok')+`</g>`;
+  document.getElementById('pllSvg').innerHTML=s;
+})();
+
+/* parts lists */
+document.querySelectorAll('[data-board-list]').forEach(t=>{
+  const L=PARTS[t.dataset.boardList];
+  t.innerHTML=`<thead><tr><th>Role</th><th>What to look for</th><th>Chosen part</th><th>LCSC #</th><th>JLCPCB</th></tr></thead><tbody>`+
+    L.map(r=>`<tr><td class="role">${esc(r.role)}</td><td>${r.look}</td><td class="pick">${r.part?esc(r.part):'<span class="todo">To pick</span>'}</td><td>${r.lcsc?esc(r.lcsc):'<span class="todo">—</span>'}</td><td>${r.cls?`<span class="cls ${r.cls.toLowerCase()==='basic'?'basic':'ext'}">${esc(r.cls)}</span>`:''}</td></tr>`).join('')+'</tbody>';
+});
+
+/* crystal layout illustrations */
+(function(){
+  const base=`<defs><pattern id="LDOT" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="0" cy="0" r="1" fill="#26333D"/></pattern></defs><rect width="360" height="400" fill="url(#LDOT)"/>`;
+  const mcu=`<rect x="250" y="40" width="120" height="330" fill="#1A252E" stroke="#F2C94C" stroke-width="2"/><text x="300" y="215" fill="#F2C94C" style="font:600 18px var(--f-key)" text-anchor="middle">MCU</text>`+
+    [80,100,120,140,160,180,200,220,240,260,280,300,320,340].map(y=>`<rect x="232" y="${y-4}" width="18" height="8" fill="#E5483B"/>`).join('');
+  const xtal=(x,y)=>`<rect x="${x}" y="${y}" width="40" height="52" fill="none" stroke="#F2C94C" stroke-width="2"/><rect x="${x+4}" y="${y+4}" width="14" height="14" fill="#E5483B"/><rect x="${x+22}" y="${y+34}" width="14" height="14" fill="#E5483B"/><rect x="${x+22}" y="${y+4}" width="14" height="14" fill="#E5483B" opacity=".45"/><rect x="${x+4}" y="${y+34}" width="14" height="14" fill="#E5483B" opacity=".45"/>`;
+  const cap=(x,y)=>`<rect x="${x}" y="${y}" width="10" height="12" fill="#E5483B"/><rect x="${x+16}" y="${y}" width="10" height="12" fill="#E5483B"/>`;
+  const good=base+`<rect x="128" y="96" width="98" height="132" rx="6" fill="none" stroke="#3B7EE8" stroke-width="5" opacity=".9"/>`+
+    `<path d="M232 140 H180 M232 160 H200 V185 H176" stroke="#E5483B" stroke-width="4" fill="none"/>`+xtal(140,124)+cap(150,104)+cap(150,206)+
+    `<text x="177" y="252" fill="#97A5B2" style="font:600 13px var(--f-key)" text-anchor="middle">guard ring (GND)</text>`+mcu;
+  const bad=base+`<path d="M232 140 H200 V300 H110 M232 160 H215 V330 H140" stroke="#E5483B" stroke-width="4" fill="none"/>`+
+    `<circle cx="215" cy="250" r="7" fill="#A9B4BE"/><circle cx="215" cy="250" r="3" fill="#0A0F13"/>`+xtal(70,280)+cap(30,250)+cap(30,350)+
+    `<path d="M10 300 H240" stroke="#3B7EE8" stroke-width="4"/>`+mcu;
+  document.getElementById('layDo').innerHTML=good;
+  document.getElementById('layAvoid').innerHTML=bad;
+})();
+
+/* ---------- crystal calculator ---------- */
+(function(){
+  const $=id=>document.getElementById(id);
+  const P={
+    hse8:{osc:'5e-3',f:8,fu:'1e6',esr:80,eu:'1',c0:3,cl:20,cs:5},
+    hse25hi:{osc:'5e-3',f:25,fu:'1e6',esr:40,eu:'1',c0:3,cl:18,cs:5},
+    hse25lo:{osc:'5e-3',f:25,fu:'1e6',esr:40,eu:'1',c0:2,cl:10,cs:5},
+    lse125:{osc:'2.8e-6',f:32.768,fu:'1e3',esr:70,eu:'1e3',c0:1,cl:12.5,cs:2},
+    lse6:{osc:'2.8e-6',f:32.768,fu:'1e3',esr:50,eu:'1e3',c0:1,cl:6,cs:2}
+  };
+  const E24=[1.0,1.1,1.2,1.3,1.5,1.6,1.8,2.0,2.2,2.4,2.7,3.0,3.3,3.6,3.9,4.3,4.7,5.1,5.6,6.2,6.8,7.5,8.2,9.1];
+  const E12=[1.0,1.2,1.5,1.8,2.2,2.7,3.3,3.9,4.7,5.6,6.8,8.2];
+  function nearest(v,S){if(!(v>0))return null;const d=Math.pow(10,Math.floor(Math.log10(v)));let best=null;[d/10,d,d*10].forEach(m=>S.forEach(x=>{const c=+(x*m).toPrecision(3);if(best===null||Math.abs(c-v)<Math.abs(best-v))best=c;}));return best;}
+  function fmtG(g,mA){return mA?(g*1e3).toFixed(2)+' mA/V':(g*1e6).toFixed(2)+' µA/V';}
+  function set(p){$('c-osc').value=p.osc;$('c-f').value=p.f;$('c-fu').value=p.fu;$('c-esr').value=p.esr;$('c-eu').value=p.eu;$('c-c0').value=p.c0;$('c-cl').value=p.cl;$('c-cs').value=p.cs;calc();}
+  function calc(){
+    const gm=parseFloat($('c-osc').value),F=parseFloat($('c-f').value)*parseFloat($('c-fu').value),ESR=parseFloat($('c-esr').value)*parseFloat($('c-eu').value);
+    const C0=parseFloat($('c-c0').value)*1e-12,CL=parseFloat($('c-cl').value)*1e-12,Cs=parseFloat($('c-cs').value);
+    const v=$('c-verdict');
+    if(![gm,F,ESR,C0,CL,Cs].every(x=>isFinite(x)&&x>=0)||F===0){v.className='verdict';v.querySelector('.big').textContent='Enter all values';v.querySelector('p').textContent='';return;}
+    const gc=4*ESR*Math.pow(2*Math.PI*F,2)*Math.pow(C0+CL,2);
+    const lim=gm/5,margin=gm/gc,pass=gc<=lim;
+    const mA=gm>=1e-3;
+    $('c-gm').textContent=fmtG(gc,mA);
+    $('c-lim').textContent='Limit for this oscillator: '+fmtG(lim,mA);
+    $('c-margin').textContent=margin>=100?Math.round(margin):margin.toFixed(1);
+    v.className='verdict '+(pass?'pass':'fail');
+    v.querySelector('.big').textContent=pass?'Should start reliably':'Risky: may not start';
+    v.querySelector('p').innerHTML=pass?`gm<sub>crit</sub> is under the limit, with a gain margin of ${margin.toFixed(1)}.`:`gm<sub>crit</sub> is ${(gc/lim).toFixed(1)}× the limit. Pick a crystal with lower ESR or lower C<sub>L</sub>.`;
+    const c=2*(CL*1e12-Cs);
+    if(c>0){$('c-caps').textContent=(+c.toPrecision(3))+' pF';$('c-std').textContent=`Nearest standard values: ${nearest(c,E24)} pF (E24), ${nearest(c,E12)} pF (E12). Use C0G/NP0.`;}
+    else{$('c-caps').textContent='—';$('c-std').innerHTML='C<sub>L</sub> is smaller than the stray capacitance. Choose a crystal with a higher C<sub>L</sub>.';}
+  }
+  document.querySelectorAll('.presets button').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();set(P[b.dataset.p]);}));
+  document.querySelectorAll('.calc input,.calc select').forEach(el=>el.addEventListener('input',calc));
+  set(P.hse8);
+})();
+
+/* ---------- navigation ---------- */
+let cur=-1;
+function maxStep(s){const a=[...s.querySelectorAll('[data-step]')].map(e=>+e.dataset.step);return Math.max(+(s.dataset.steps||0),...a,0);}
+function setStep(s,n,anim){
+  if(REDUCE)anim=false;
+  if(!anim)s.classList.add('instant');
+  s.dataset.cur=n;s._step=n;
+  s.querySelectorAll('[data-step]').forEach(e=>e.classList.toggle('shown',+e.dataset.step<=n));
+  for(let i=1;i<=9;i++)s.classList.toggle('s'+i,i<=n);
+  if(!anim){void s.offsetWidth;requestAnimationFrame(()=>requestAnimationFrame(()=>s.classList.remove('instant')));}
+}
+function show(i,n,anim){
+  i=Math.max(0,Math.min(slides.length-1,i));
+  const s=slides[i];
+  if(i!==cur){
+    if(cur>=0){const o=slides[cur];o.classList.remove('active');setTimeout(()=>{if(!o.classList.contains('active'))setStep(o,0,false);},400);}
+    s.classList.add('active');cur=i;setStep(s,0,false);if(n>0)setStep(s,n,false);
+  }else setStep(s,n,anim);
+  history.replaceState(null,'','#'+(i+1)+(n?'.'+n:''));
+  const notes=s.querySelector('.notes');
+  document.querySelector('#notes h5').textContent=`Slide ${i+1} of ${slides.length}: ${s.dataset.title}`;
+  document.querySelector('#notes .body').textContent=notes?notes.textContent.trim():'';
+}
+function next(){const s=slides[cur];if(s._step<maxStep(s))show(cur,s._step+1,true);else if(cur<slides.length-1)show(cur+1,0,true);}
+function prev(){const s=slides[cur];if(s._step>0)show(cur,s._step-1,true);else if(cur>0)show(cur-1,maxStep(slides[cur-1]),false);}
+const typing=t=>t&&t.closest&&t.closest('input,select,textarea,button');
+addEventListener('keydown',e=>{
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  if(typing(e.target)){if(e.key==='Escape')e.target.blur();return;}
+  const k=e.key;
+  if(['ArrowRight','ArrowDown','PageDown',' ','Enter'].includes(k)){e.preventDefault();next();}
+  else if(['ArrowLeft','ArrowUp','PageUp','Backspace'].includes(k)){e.preventDefault();prev();}
+  else if(k==='Home')show(0,0,true);
+  else if(k==='End')show(slides.length-1,0,true);
+  else if(k==='n'||k==='N')document.body.classList.toggle('show-notes');
+  else if(k==='f'||k==='F'){if(!document.fullscreenElement)document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();else document.exitFullscreen();}
+  else if(k==='?')document.body.classList.toggle('show-help');
+});
+document.getElementById('next').onclick=e=>{e.stopPropagation();next();};
+document.getElementById('prev').onclick=e=>{e.stopPropagation();prev();};
+document.getElementById('helpbtn').onclick=e=>{e.stopPropagation();document.body.classList.toggle('show-help');};
+deck.addEventListener('click',e=>{if(e.target.closest('a,button,input,select,label,.calc'))return;const r=deck.getBoundingClientRect();if(e.clientX<r.left+r.width*0.25)prev();else next();});
+let idle;addEventListener('mousemove',()=>{document.body.classList.add('pointer');clearTimeout(idle);idle=setTimeout(()=>document.body.classList.remove('pointer'),2500);});
+let tx=null;
+addEventListener('touchstart',e=>{tx=e.touches[0].clientX;},{passive:true});
+addEventListener('touchend',e=>{if(tx===null||typing(e.target))return;const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50){dx<0?next():prev();}tx=null;});
+function fromHash(){const m=location.hash.match(/^#(\d+)(?:\.(\d+))?/);if(m)return[+m[1]-1,+(m[2]||0)];return[0,0];}
+const [hi,hn]=fromHash();show(hi,hn,false);
+addEventListener('hashchange',()=>{const [i,n]=fromHash();if(i!==cur||n!==slides[cur]._step)show(i,n,false);});
+})();
+</script>
+</body>
+</html>
