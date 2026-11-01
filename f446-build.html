@@ -663,14 +663,14 @@ body.pointer #navbtns{opacity:.7}
     <h2><span class="num">5</span>Debug header</h2>
     <ul class="points">
       <li data-step="1">Pin <span class="pin">46</span> (PA13) is <span class="net d">SWDIO</span>, pin <span class="pin">49</span> (PA14) is <span class="net d">SWCLK</span>.</li>
-      <li data-step="1">A 5-pin header: +3V3, SWDIO, SWCLK, NRST, GND. Print the pin names on the silkscreen.</li>
+      <li data-step="1">Pins 1 to 5 in the same order as the Nucleo's CN4 debug header: +3V3, SWCLK, GND, SWDIO, NRST. Print the pin names on the silkscreen.</li>
       <li data-step="2">Optional: pin <span class="pin">55</span> (PB3) as <span class="net d">SWO</span>, for printing debug messages over the same cable.</li>
     </ul>
-    <p class="warn">Any ST-LINK programmer works, including the one built into a Nucleo board.</p>
+    <p class="warn">Any ST-LINK programmer works. With the Nucleo's, take off its CN2 jumpers and wire CN4 to J2 pin for pin.</p>
   </div>
   <svg class="sc schem" style="top:520px" viewBox="0 0 820 220" aria-hidden="true" id="sc5"></svg>
   <div class="u1host" data-build="5"></div>
-  <aside class="notes">This is how the chip gets programmed and debugged, so it is not optional. Never reuse PA13 and PA14 for anything else in firmware, or you lock yourself out until you connect under reset. The header is our own simple pinout; any order works as long as the silkscreen says what each pin is.</aside>
+  <aside class="notes">This is how the chip gets programmed and debugged, so it is not optional. Never reuse PA13 and PA14 for anything else in firmware, or you lock yourself out until you connect under reset. The header copies the pin order of CN4, the debug header on the Nucleo's ST-LINK, so six jumper wires go straight across: pin 1 to pin 1 and so on. Pin 1 only lets the ST-LINK sense our 3.3 V, so our board still needs its own power.</aside>
 </section>
 
 <!-- 18 Step 6 USB-C -->
@@ -790,6 +790,7 @@ body.pointer #navbtns{opacity:.7}
     <h2>Keep these open while you work</h2>
     <ul class="res">
       <li><a href="F446-Build-Sheet.pdf" download>F446 build sheet (PDF)</a>Every core pin and what it connects to, plus the Standard shortcuts.</li>
+      <li><a href="F446-Parts-List.pdf" download>F446 parts list (PDF)</a>Every part by sheet with its LCSC number to search, and the Nucleo plan.</li>
       <li><a href="mcu-parts.html">Picking parts for a custom STM32 board</a>The deeper talk, with the crystal calculator on slide 17.</li>
       <li><a href="STM32-Parts-Worksheet.pdf" download>Parts worksheet (PDF)</a>Pin budget, parts list and crystal math to fill in.</li>
       <li><a href="https://docs.easyeda.com/en/Schematic/Wiring-Tools/" target="_blank" rel="noopener">EasyEDA Standard: Wiring Tools</a>Wires, net labels, flags and No Connect.</li>
@@ -940,7 +941,7 @@ const set=(id,s)=>{const e=document.getElementById(id);if(e)e.innerHTML=s;};
 })();
 /* step 5: SWD header */
 (function(){
-  const pins=[['+3V3','p'],['SWDIO','d'],['SWCLK','d'],['NRST','c'],['GND','g']];
+  const pins=[['+3V3','p'],['SWCLK','d'],['GND','g'],['SWDIO','d'],['NRST','c']];
   let s=box(430,14,110,200,'J2  SWD');
   pins.forEach((pp,i)=>{const y=40+i*38;const q=pill(380,y,pp[0],pp[1],'r');s+=q.s+W(`M380 ${y} H430`)+T(452,y+5,`${i+1}  ${pp[0]}`);});
   s+=T(570,90,'to the ST-LINK','n')+`<g class="k"><path d="M560 110 H660 M650 102 L662 110 L650 118"/></g>`;

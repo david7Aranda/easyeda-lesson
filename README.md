@@ -13,6 +13,14 @@ Open **`f446-build.html`**. It's the main event deck, 25 slides in four parts:
 
 Print **`F446-Build-Sheet.pdf`**, one per person. Page 1 lists every core pin and what it connects to, with checkboxes. Page 2 is the EasyEDA Standard shortcut list.
 
+Print **`F446-Parts-List.pdf`** too. It's three pages:
+
+1. **Sheets 1 and 2** (MCU core, power and USB): every part with its designator, value, package and LCSC number. In EasyEDA Standard, press `Shift+F`, paste the LCSC number (for example `C14663`) and place the part. Each row also says what the part connects to and whether it's a JLCPCB Basic or Extended part.
+2. **Sheets 3 and 4** (clocks and debug, signs of life), then an order list with one line per LCSC number: 20 different parts, 34 pieces per board.
+3. **The Nucleo-F446RE**: which pins match our board, how to program our board with the Nucleo's ST-LINK, the first firmware to write, and a plan to Thursday and the final.
+
+The SWD header J2 uses the same pin order as the Nucleo's CN4 debug header (1 +3V3, 2 SWCLK, 3 GND, 4 SWDIO, 5 NRST, 6 SWO), so it wires straight across.
+
 The deck and the build sheet are written for **EasyEDA Standard** (easyeda.com/editor), the editor in our screenshots. The older lesson in `index.html` and `EasyEDA-Pro-Shortcuts.pdf` are for **EasyEDA Pro**, where some menus and keys differ.
 
 ## All the talks
@@ -28,6 +36,8 @@ The deck and the build sheet are written for **EasyEDA Standard** (easyeda.com/e
 | `f446-build.html` | **Event deck:** EasyEDA Standard basics, then the F446 core wired pin by pin, 25 slides |
 | `f446-build-sheet.html` | Event handout: the build sheet as a web page, with a Print button |
 | `F446-Build-Sheet.pdf` | The same build sheet as a 2-page letter-size PDF |
+| `f446-parts-list.html` | Parts list by EasyEDA sheet with LCSC numbers, the order list and the Nucleo plan, as a web page |
+| `F446-Parts-List.pdf` | The same parts list as a 3-page letter-size PDF |
 | `index.html` | Talk 1: the EasyEDA Pro lesson, 21 slides with step-by-step animations |
 | `cheatsheet.html` | Talk 1 handout: the shortcut sheet as a web page, with a Print button |
 | `EasyEDA-Pro-Shortcuts.pdf` | The same shortcut sheet as a 2-page letter-size PDF |
@@ -108,7 +118,7 @@ Many slides animate in steps (wires drawing, parts moving into place, tracks rou
 3. Choose the **main** branch and the **/ (root)** folder, then click **Save**.
 4. After a minute or two, the page shows your site address. It looks like `https://YOUR-USERNAME.github.io/easyeda-lesson/`.
 
-Share that link with students. The site address opens the EasyEDA Pro lesson (`index.html`). Every other file is at the same address followed by its name. For the event, share `.../f446-build.html` and `.../F446-Build-Sheet.pdf`.
+Share that link with students. The site address opens the EasyEDA Pro lesson (`index.html`). Every other file is at the same address followed by its name. For the event, share `.../f446-build.html`, `.../F446-Build-Sheet.pdf` and `.../F446-Parts-List.pdf`.
 
 ## Printing the shortcut sheet
 
