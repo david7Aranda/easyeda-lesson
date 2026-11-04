@@ -1,0 +1,1373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F446 Board Components</title>
+<meta name="description" content="Part 2 of the F446 event: every component on the STM32F446RET6 board, why it was chosen, and how to find it in EasyEDA.">
+<style>
+@font-face{font-family:"Barlow";src:url("fonts/Barlow-Regular.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Barlow";src:url("fonts/Barlow-Medium.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Barlow";src:url("fonts/Barlow-SemiBold.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Barlow Condensed";src:url("fonts/BarlowCondensed-Medium.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Barlow Condensed";src:url("fonts/BarlowCondensed-SemiBold.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Barlow Semi Condensed";src:url("fonts/BarlowSemiCondensed-SemiBold.woff2") format("woff2");font-weight:600;font-display:swap}
+
+:root{
+  --paper:#EDF0F2; --paper-hi:#F8FAFB; --dots:#C3CDD5;
+  --ink:#17212B; --ink-2:#44525F; --ink-3:#7D8A96; --rule:#8C98A3; --line:#D3DAE0;
+  --net:#1D5DBF; --net-tint:#DCE6F4; --net-ink:#123D7E;
+  --a:#1D5DBF; --a-tint:#DCE6F4; --a-ink:#123D7E;
+  --b:#8B3FB5; --b-tint:#EEE2F5; --b-ink:#5B2180;
+  --pwr:#C62828; --pwr-tint:#FBE3E1;
+  --sym:#A0413A;
+  --board:#111920; --board-2:#1A252E; --board-rule:#33424F; --board-ink:#E4EAEF; --board-ink-2:#97A5B2;
+  --cu-top:#E5483B; --silk:#F2C94C; --edge:#DE57DE;
+  --ok:#2F9E5C; --ok-tint:#DDF1E5; --err:#D93B2F; --err-tint:#F8DEDB; --hl:#F4B63F;
+  --f-body:"Barlow","Inter","Segoe UI",system-ui,sans-serif;
+  --f-cond:"Barlow Condensed","Roboto Condensed","Arial Narrow",sans-serif;
+  --f-key:"Barlow Semi Condensed","Barlow","Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#2B343C}
+body{font-family:var(--f-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+#viewport{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#deck{position:relative;width:1600px;height:900px;flex:none;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--paper);color:var(--ink);overflow:hidden;visibility:hidden;opacity:0;transition:opacity .35s ease,visibility 0s linear .35s}
+.slide.active{visibility:visible;opacity:1;transition:opacity .35s ease,visibility 0s}
+.slide.dark{background:var(--board);color:var(--board-ink)}
+.instant,.instant *{transition:none!important}
+
+.frame{position:absolute;left:0;top:0;width:1600px;height:900px;pointer-events:none}
+.frame rect{fill:none;stroke:var(--rule);stroke-width:1}
+.frame .outer{stroke-width:1.6}
+.frame line{stroke:var(--rule);stroke-width:1}
+.frame text{fill:var(--ink-3);font:600 12px var(--f-key);text-anchor:middle;dominant-baseline:central}
+.dark .frame rect,.dark .frame line{stroke:var(--board-rule)}
+.dark .frame text{fill:var(--board-ink-2)}
+.tblock{position:absolute;right:44px;bottom:44px;width:476px;display:grid;grid-template-columns:1fr 96px 82px;border-top:1.5px solid var(--rule);border-left:1.5px solid var(--rule);background:var(--paper);z-index:3}
+.tblock>div{padding:5px 10px 6px;border-left:1px solid var(--rule);display:flex;flex-direction:column;min-width:0}
+.tblock .tb-course{grid-column:1/-1;border-left:0;border-bottom:1px solid var(--rule);flex-direction:row;justify-content:space-between;align-items:baseline;font:600 15px var(--f-key);color:var(--ink-2)}
+.tblock .tb-title{border-left:0}
+.tblock span{font:500 11px/1.2 var(--f-body);color:var(--ink-3)}
+.tblock b{font:600 17px/1.2 var(--f-key);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dark .tblock{background:var(--board);border-color:var(--board-rule)}
+.dark .tblock>div{border-color:var(--board-rule)}
+.dark .tblock .tb-course,.dark .tblock span{color:var(--board-ink-2)}
+.dark .tblock b{color:var(--board-ink)}
+
+.content{position:absolute;left:96px;top:92px;width:640px;z-index:2}
+.content.wide{width:1400px}
+h1{font:600 96px/.95 var(--f-cond);letter-spacing:-.01em;margin:0}
+h2{font:600 54px/1.02 var(--f-cond);margin:0 0 24px;letter-spacing:-.004em;display:flex;align-items:center;gap:16px}
+h2 .num{flex:none;width:58px;height:58px;border-radius:50%;border:3px solid var(--net);color:var(--net);display:grid;place-items:center;font:600 31px/1 var(--f-cond);background:var(--paper-hi)}
+.dark h2 .num{border-color:var(--cu-top);color:#FF7A6E;background:var(--board-2);border-radius:8px}
+p.lead{font:400 28px/1.34 var(--f-body);color:var(--ink-2);margin:0}
+.dark p.lead{color:var(--board-ink-2)}
+p.hint{font:500 20px/1.4 var(--f-body);color:var(--ink-3);margin:40px 0 0;max-width:30em}
+ul.points{list-style:none;margin:0;padding:0}
+ul.points li{font:400 23px/1.36 var(--f-body);margin:0 0 13px;padding-left:28px;position:relative}
+ul.points li::before{content:"";position:absolute;left:3px;top:.56em;width:10px;height:10px;border-radius:50%;background:var(--net)}
+.dark ul.points li::before{background:var(--cu-top);border-radius:2px}
+ul.points li.aside{font-size:20px;color:var(--ink-2)}
+ul.points li.aside::before{background:transparent;border:2px solid var(--ink-3)}
+.dark ul.points li.aside{color:var(--board-ink-2)}
+kbd{display:inline-block;font:600 .86em/1.15 var(--f-key);min-width:1.75em;text-align:center;padding:2px 8px 3px;border:1.5px solid #A9B5C0;border-bottom-width:4px;border-radius:7px;background:#fff;color:var(--ink);vertical-align:.06em;white-space:nowrap}
+.dark kbd{background:#22303B;border-color:#44545F;color:#EEF2F5}
+.plus{margin:0 3px;color:var(--ink-3);font-weight:500}
+.menu{font:600 .9em var(--f-key);background:var(--net-tint);color:var(--net-ink);padding:1px 8px 2px;border-radius:5px;white-space:nowrap}
+.menu i{font-style:normal;opacity:.55;margin:0 5px}
+.dark .menu{background:#243340;color:#F0F4F7}
+.tag{display:inline-flex;align-items:center;gap:6px;font:600 17px/1 var(--f-key);padding:5px 10px 6px;border-radius:5px;white-space:nowrap;vertical-align:.12em}
+.tag.a{background:var(--a-tint);color:var(--a-ink)}
+.tag.b{background:var(--b-tint);color:var(--b-ink)}
+.tag.go{background:var(--ok-tint);color:#1E6E3F}
+.net{font:600 .88em var(--f-key);padding:0 7px 1px;border-radius:4px;white-space:nowrap}
+.net.p{background:var(--pwr-tint);color:#9B1C1C}.net.g{background:#E3E7EA;color:var(--ink)}.net.s{background:var(--net-tint);color:var(--net-ink)}
+.net.c{background:var(--b-tint);color:var(--b-ink)}.net.k{background:#FCEBD0;color:#8A5300}.net.d{background:#D8F0EC;color:#0B5E55}
+.pin{font:600 .9em var(--f-key);color:var(--ink)}
+.warn{font:400 19px/1.4 var(--f-body);color:var(--ink-2);padding:2px 0 2px 14px;border-left:4px solid var(--hl);margin-top:14px}
+.warn b{color:var(--ink)}
+
+[data-step]{opacity:0;transform:translateY(10px);transition:opacity .45s ease,transform .45s ease}
+[data-step].shown{opacity:1;transform:none}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes fadein{to{opacity:1}}
+@keyframes pop{to{opacity:1;transform:none}}
+.gs{opacity:0;transition:opacity .45s ease}
+.s1 .gs.g1,.s2 .gs.g2,.s3 .gs.g3,.s4 .gs.g4,.s5 .gs.g5,.s6 .gs.g6{opacity:1}
+.gs.g0{opacity:1}
+
+/* ---------- U1 symbol ---------- */
+.u1host{position:absolute;left:0;top:0;width:1600px;height:900px;pointer-events:none}
+.u1host svg{position:absolute;left:0;top:0;width:1600px;height:900px;overflow:visible}
+.u1 .u1-body{fill:#FFFDFB;stroke:var(--sym);stroke-width:1.6}
+.u1 .u1-des{font:600 16px var(--f-key);fill:var(--ink);text-anchor:middle}
+.u1 .u1-pn{font:600 15px var(--f-key);fill:var(--ink-2);text-anchor:middle}
+.u1 .stub{stroke:var(--sym);stroke-width:1.4}
+.u1 .pnum{font:600 10.5px var(--f-key);fill:var(--ink-3)}
+.u1 .pname{font:600 12.5px var(--f-key)}
+.u1 .pname.io{fill:#1E3FCC}.u1 .pname.pwr{fill:var(--pwr)}.u1 .pname.gnd{fill:var(--ink)}
+.u1 .dot1{fill:var(--sym)}
+.u1 .tg{opacity:0;transition:opacity .35s ease}
+.u1 .tg.t0{opacity:1}
+.s1 .u1 .tg.t1,.s2 .u1 .tg.t2,.s3 .u1 .tg.t3,.s4 .u1 .tg.t4,.s5 .u1 .tg.t5{opacity:1}
+.u1 .tg .lead{stroke-width:2.4}
+.u1 .tg text{font:600 12.5px var(--f-key)}
+.u1 .pinrow{opacity:1}
+.u1-title .pinrow{opacity:0}
+.active .u1-title .pinrow{animation:fadein .25s ease forwards}
+.u1-title .tg{transition-delay:1.5s}
+
+/* ---------- sub-circuits ---------- */
+.sc{position:absolute;left:96px;width:820px;height:auto;overflow:visible}
+.schem{overflow:visible}
+.schem .k path,.schem .k rect,.schem .k circle{fill:none;stroke:var(--ink);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.schem .k .fill{fill:var(--paper-hi)}
+.schem .k .solid{fill:var(--ink)}
+.schem .w{fill:none;stroke:var(--net);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.schem text{font:600 15px var(--f-key);fill:var(--ink)}
+.schem text.v{font-weight:600;fill:var(--net-ink)}
+.schem text.n{fill:var(--ink-2);font-size:14px}
+.schem text.box{font-size:15px}
+.schem .pl text{font:600 13.5px var(--f-key)}
+
+/* ---------- roadmap ---------- */
+.road-trace{position:absolute;left:0;top:0;width:1600px;height:900px;pointer-events:none}
+.road-trace path{fill:none;stroke:var(--ink-2);stroke-width:7;stroke-linecap:round;stroke-dasharray:1 2;stroke-dashoffset:1}
+.active .road-trace path{animation:draw 1.8s linear .2s forwards}
+.stop{position:absolute;top:330px;width:330px;margin-left:-165px;text-align:center;opacity:0;transform:translateY(10px)}
+.active .stop{animation:pop .45s ease forwards}
+.stop .pad{width:78px;height:78px;border-radius:50%;margin:0 auto 18px;display:grid;place-items:center;font:600 38px/1 var(--f-cond);background:var(--paper-hi);border:4px solid var(--ink-2)}
+.stop h3{font:600 30px/1.1 var(--f-cond);margin:0 0 6px}
+.stop p{font:400 20px/1.35 var(--f-body);color:var(--ink-2);margin:0 auto;max-width:280px}
+.stop .sl{display:block;font:600 16px var(--f-key);color:var(--ink-3);margin-top:8px}
+
+/* ---------- sch vs pcb ---------- */
+.svp{position:absolute;left:96px;top:196px;width:1410px;display:grid;grid-template-columns:1fr 80px 1fr;align-items:center}
+.svp .panel{border:1.5px solid var(--rule);border-radius:10px;padding:18px 22px;height:440px;position:relative}
+.svp .p1{background:var(--paper-hi)}
+.svp .p2{background:var(--board);border-color:var(--board-rule);opacity:0;transform:translateX(16px);transition:opacity .5s,transform .5s}
+.s1 .svp .p2{opacity:1;transform:none}
+.svp h3{margin:0 0 4px;font:600 30px var(--f-cond)}
+.svp .p2 h3{color:var(--board-ink)}
+.svp p{margin:0;font:400 19px/1.35 var(--f-body);color:var(--ink-2)}
+.svp .p2 p{color:var(--board-ink-2)}
+.svp svg{position:absolute;left:22px;right:22px;bottom:18px;width:calc(100% - 44px);height:auto}
+.svp .arrow{text-align:center;font:600 16px var(--f-key);color:var(--ink-3);opacity:0;transition:opacity .4s}
+.s1 .svp .arrow{opacity:1}
+.svp .arrow svg{position:static;width:60px;height:auto;display:block;margin:0 auto 6px}
+
+/* ---------- screen tour ---------- */
+.scr{position:absolute;left:96px;top:186px;width:960px;height:560px;border:1.5px solid var(--rule);border-radius:10px;background:#fff;overflow:hidden;font-family:var(--f-body)}
+.scr>div{position:absolute;transition:box-shadow .3s,background-color .3s}
+.scr .tabs{left:0;right:0;top:0;height:36px;background:#E4E7EA;border-bottom:1px solid #CDD3D8;display:flex;align-items:flex-end;gap:2px;padding:0 0 0 10px}
+.scr .tabs span{font:500 15px var(--f-body);color:var(--ink-2);padding:7px 16px;border-radius:5px 5px 0 0}
+.scr .tabs span.on{background:#fff;color:var(--ink)}
+.scr .menu-bar{left:0;right:0;top:36px;height:34px;border-bottom:1px solid #DDE2E6;display:flex;gap:20px;align-items:center;padding:0 16px;font:600 14px var(--f-key);color:var(--ink-2)}
+.scr .left{left:0;top:70px;width:120px;bottom:0;border-right:1px solid #DDE2E6;background:#F6F7F8;padding:12px 10px;font:500 14px/2.1 var(--f-body);color:var(--ink-2)}
+.scr .canvas{left:120px;right:34px;top:70px;bottom:0;background-image:linear-gradient(#EEF1F3 1px,transparent 1px),linear-gradient(90deg,#EEF1F3 1px,transparent 1px);background-size:12px 12px}
+.scr .canvas .frameA{position:absolute;left:22px;top:18px;bottom:46px;width:10px;border-right:1.5px solid #9B2C2C}
+.scr .canvas .frameA i{position:absolute;left:0;font:600 11px var(--f-key);color:#9B2C2C;font-style:normal}
+.scr .canvas .mini{position:absolute;left:150px;top:44px;width:130px;height:290px;border:1.2px solid var(--sym);background:#FFFDFB}
+.scr .canvas .mini::before{content:"U1  STM32F446RET6";position:absolute;left:0;top:-20px;font:600 11px var(--f-key);color:var(--ink);white-space:nowrap}
+.scr .canvas .mini i{position:absolute;height:1.2px;width:10px;background:var(--sym)}
+.scr .wt{right:150px;top:84px;width:250px;height:100px;background:#fff;border:1px solid #CDD3D8;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.scr .dt{right:44px;top:84px;width:96px;height:270px;background:#fff;border:1px solid #CDD3D8;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.scr .wt b,.scr .dt b{display:block;font:500 13px var(--f-body);color:var(--ink-2);padding:6px 9px;border-bottom:1px solid #E6E9EC}
+.scr .wt svg,.scr .dt svg{display:block;margin:6px auto 0}
+.scr .sheets{left:130px;bottom:6px;height:32px;width:200px;display:flex;gap:6px;align-items:center}
+.scr .sheets span{font:500 15px var(--f-body);color:var(--ink);background:#fff;border:1px solid #CDD3D8;padding:4px 12px;border-radius:4px}
+.scr .right{right:0;top:70px;width:34px;bottom:0;border-left:1px solid #DDE2E6;background:#F6F7F8}
+.scr .badge{position:absolute;width:28px;height:28px;border-radius:50%;background:var(--net);color:#fff;font:600 16px/28px var(--f-key);text-align:center;opacity:0;transform:scale(.6);transition:opacity .3s,transform .3s cubic-bezier(.3,1.6,.5,1);z-index:3}
+.slide[data-cur="1"] .scr .tabs,.slide[data-cur="2"] .scr .menu-bar,.slide[data-cur="3"] .scr .left,.slide[data-cur="4"] .scr .canvas,.slide[data-cur="5"] .scr .wt,.slide[data-cur="6"] .scr .dt,.slide[data-cur="7"] .scr .sheets,.slide[data-cur="8"] .scr .right{box-shadow:inset 0 0 0 3px var(--net),0 0 0 3px var(--net);background-color:rgba(29,93,191,.06)}
+.slide[data-cur="6"] .scr .dt{box-shadow:inset 0 0 0 3px var(--hl),0 0 0 3px var(--hl)}
+.slide[data-cur="1"] .b1,.slide[data-cur="2"] .b2,.slide[data-cur="3"] .b3,.slide[data-cur="4"] .b4,.slide[data-cur="5"] .b5,.slide[data-cur="6"] .b6,.slide[data-cur="7"] .b7,.slide[data-cur="8"] .b8{opacity:1;transform:none}
+.tour{position:absolute;left:1088px;top:180px;width:430px;list-style:none;margin:0;padding:0}
+.tour li{display:grid;grid-template-columns:30px 1fr;gap:10px;margin-bottom:10px;font:400 18px/1.3 var(--f-body);color:var(--ink-2);transition:opacity .3s}
+.tour li b{display:block;font:600 20px/1.2 var(--f-key);color:var(--ink)}
+.tour li .l{width:26px;height:26px;border-radius:50%;border:2px solid var(--net);color:var(--net);font:600 14px/22px var(--f-key);text-align:center;margin-top:1px}
+.slide:not([data-cur="0"]) .tour li{opacity:.3}
+.slide[data-cur="1"] .tour li:nth-child(1),.slide[data-cur="2"] .tour li:nth-child(2),.slide[data-cur="3"] .tour li:nth-child(3),.slide[data-cur="4"] .tour li:nth-child(4),.slide[data-cur="5"] .tour li:nth-child(5),.slide[data-cur="6"] .tour li:nth-child(6),.slide[data-cur="7"] .tour li:nth-child(7),.slide[data-cur="8"] .tour li:nth-child(8){opacity:1}
+
+/* ---------- library dialog ---------- */
+.lib{position:absolute;left:740px;top:176px;width:780px;background:#F7F7F7;border:1.5px solid var(--rule);border-radius:6px;font-family:var(--f-body);overflow:hidden}
+.lib .r{display:flex;align-items:center;gap:16px;padding:9px 14px;font:400 15px var(--f-body);color:var(--ink-2)}
+.lib .r .lab{width:96px;color:var(--ink-3)}
+.lib .chipbtn{padding:4px 10px;border:1px solid transparent;border-radius:3px;white-space:nowrap}
+.lib .chipbtn.on{border-color:#7FA6E8;color:#2E66D0;background:#fff}
+.lib .search{flex:1;border-bottom:1.5px solid #8C98A3;font:600 19px var(--f-key);color:var(--ink);padding:2px 4px;min-height:28px;display:flex;align-items:center}
+.lib .search .typed{display:inline-block;overflow:hidden;white-space:nowrap;width:0;vertical-align:bottom}
+.s1 .lib .search .typed{width:13ch;transition:width 1.1s steps(13)}
+.lib table{width:calc(100% - 28px);margin:6px 14px 10px;border-collapse:collapse;background:#fff;font:400 15px var(--f-body)}
+.lib th{text-align:left;font:600 14px var(--f-key);color:var(--ink);background:#EDEDED;padding:7px 10px;border:1px solid #DDD}
+.lib td{padding:7px 10px;border:1px solid #E5E5E5;color:var(--ink-2);white-space:nowrap}
+.lib td.pnc{color:var(--ink);font-weight:500}
+.lib .rows{opacity:0;transition:opacity .3s 1s}
+.s1 .lib .rows{opacity:1}
+.lib tr.pick td{transition:background-color .3s}
+.s3 .lib tr.pick td{background:#E5EEFC}
+.lib .cls-l{transition:box-shadow .3s}
+.s2 .lib .cls-l{box-shadow:0 0 0 3px var(--hl)}
+.s2 .lib .cls-u{text-decoration:line-through;color:var(--ink-3)}
+.lib .btns{display:flex;justify-content:flex-end;gap:10px;padding:10px 14px 14px}
+.lib .btns span{font:500 15px var(--f-body);color:#fff;background:#A9BEEA;padding:7px 18px;border-radius:4px}
+.lib .btns span.pl{transition:background-color .3s,box-shadow .3s}
+.s3 .lib .btns span.pl{background:#4A7FE8;box-shadow:0 0 0 3px var(--hl)}
+.lib .btns span.cn{background:#4A7FE8}
+
+/* ---------- wiring tools ---------- */
+.wtp{position:absolute;left:96px;top:196px;width:600px}
+.wtp .pal{background:#fff;border:1.5px solid #CDD3D8;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.08);overflow:hidden}
+.wtp .pal b{display:flex;justify-content:space-between;font:500 19px var(--f-body);color:var(--ink-2);padding:10px 16px;border-bottom:1px solid #E6E9EC}
+.wtp .pal svg{display:block;margin:10px auto 14px}
+.wtp .ico .on{fill:none;stroke:#4C5A68;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.wtp .ico text{font:600 10px var(--f-key);fill:#4C5A68;text-anchor:middle}
+.wtp .ico .hlc{fill:none;stroke:var(--net);stroke-width:3;opacity:0;transition:opacity .3s}
+.slide[data-cur="1"] .ico .h1,.slide[data-cur="2"] .ico .h2,.slide[data-cur="3"] .ico .h3,.slide[data-cur="4"] .ico .h4{opacity:1}
+.wt-list{position:absolute;left:760px;top:186px;width:760px;border-collapse:collapse;font:400 19px/1.3 var(--f-body)}
+.wt-list th{text-align:left;font:600 15px var(--f-key);color:var(--ink-3);padding:6px 10px;border-bottom:1.5px solid var(--ink-2)}
+.wt-list td{padding:10px;border-bottom:1px solid var(--line);color:var(--ink-2);vertical-align:top;transition:background-color .3s}
+.wt-list td:first-child{font:600 20px var(--f-key);color:var(--ink);white-space:nowrap}
+.wt-list td:nth-child(2){white-space:nowrap}
+.slide[data-cur="1"] .wt-list .r1 td,.slide[data-cur="2"] .wt-list .r2 td,.slide[data-cur="3"] .wt-list .r3 td,.slide[data-cur="4"] .wt-list .r4 td{background:#FFF1D6}
+
+/* ---------- same net ---------- */
+.nets-scene{position:absolute;left:760px;top:170px;width:760px}
+.nets-scene svg{width:760px;height:auto;display:block;overflow:visible}
+.nets-scene .link{fill:none;stroke:var(--net);stroke-width:2.5;stroke-dasharray:8 7;opacity:0;transition:opacity .5s}
+.s1 .nets-scene .link{opacity:1}
+.nets-scene .cap1{opacity:0;transition:opacity .4s .4s}
+.s1 .nets-scene .cap1{opacity:1}
+.nets-scene .nc{opacity:0;transition:opacity .4s}
+.s2 .nets-scene .nc{opacity:1}
+
+/* ---------- shortcuts ---------- */
+.sc-grid{position:absolute;left:96px;top:196px;width:1410px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:46px}
+.sc-grid h3{font:600 28px var(--f-cond);margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid var(--ink)}
+.sc-grid dl{display:grid;grid-template-columns:max-content 1fr;gap:10px 16px;margin:0;align-items:baseline}
+.sc-grid dt{font-size:21px;white-space:nowrap}
+.sc-grid dd{margin:0;font:400 20px/1.3 var(--f-body);color:var(--ink-2)}
+.sc-links{position:absolute;left:96px;top:700px;display:flex;gap:18px;align-items:center}
+.btn{font:600 21px var(--f-key);text-decoration:none;color:#fff;background:var(--net);padding:11px 20px;border-radius:8px;border:2px solid var(--net)}
+.btn.ghost{background:transparent;color:var(--net)}
+.btn:focus-visible{outline:3px solid var(--hl);outline-offset:3px}
+.sc-note{font:400 18px var(--f-body);color:var(--ink-3);margin-left:8px;max-width:420px;line-height:1.35}
+
+/* ---------- boards ---------- */
+.cards{position:absolute;left:96px;top:196px;width:1410px;display:grid;grid-template-columns:1fr 1fr;gap:44px}
+.card{background:var(--paper-hi);border:1.5px solid var(--rule);border-radius:10px;padding:22px 26px 22px;position:relative}
+.card::before{content:"";position:absolute;left:-1.5px;right:-1.5px;top:-1.5px;height:6px;border-radius:10px 10px 0 0}
+.card.a::before{background:var(--a)}.card.b::before{background:var(--b)}
+.card.b{box-shadow:0 0 0 3px var(--b-tint)}
+.card h3{margin:8px 0 4px;font:600 38px/1.05 var(--f-cond)}
+.card .job{font:400 21px/1.35 var(--f-body);color:var(--ink-2);margin:0 0 14px}
+.card dl{margin:0;display:grid;grid-template-columns:120px 1fr;gap:7px 12px;font:400 19px/1.3 var(--f-body)}
+.card dt{font:600 17px/1.5 var(--f-key);color:var(--ink-3)}
+.card dd{margin:0}
+.card .why{margin:16px 0 0;padding-top:12px;border-top:1px solid var(--line);font:400 19px/1.4 var(--f-body);color:var(--ink-2)}
+.carry{position:absolute;left:96px;top:196px;width:1410px;display:grid;grid-template-columns:1fr 1fr;gap:56px}
+.carry h3{font:600 30px var(--f-cond);margin:0 0 10px;padding-bottom:8px;border-bottom:2px solid var(--ink);display:flex;gap:10px;align-items:center}
+.carry ul{list-style:none;margin:0;padding:0}
+.carry li{font:400 21px/1.35 var(--f-body);color:var(--ink-2);padding:10px 0;border-bottom:1px solid var(--line)}
+.carry li b{color:var(--ink);font-weight:600}
+
+/* ---------- blocks ---------- */
+.blocks{position:absolute;left:96px;top:176px;width:1410px;height:600px}
+.blocks svg{width:1410px;height:600px;overflow:visible}
+.blocks .chipb{fill:#FFFDFB;stroke:var(--sym);stroke-width:2.5}
+.blocks .bx{fill:var(--paper-hi);stroke:var(--ink-2);stroke-width:2}
+.blocks .bn{font:600 22px var(--f-cond);fill:#fff;text-anchor:middle}
+.blocks .bt{font:600 23px var(--f-key);fill:var(--ink)}
+.blocks .bs{font:400 16px var(--f-body);fill:var(--ink-2)}
+.blocks .ln{fill:none;stroke:var(--net);stroke-width:3;stroke-dasharray:1 2;stroke-dashoffset:1}
+.blocks .blk{opacity:0;transform:translateY(8px)}
+.active .blocks .blk{animation:pop .4s ease forwards}
+.active .blocks .ln{animation:draw .5s ease forwards}
+
+/* ---------- meet ---------- */
+.legend{list-style:none;margin:6px 0 0;padding:0}
+.legend li{display:grid;grid-template-columns:62px 1fr;gap:14px;align-items:start;margin-bottom:14px}
+.legend .cnt{font:600 40px/1 var(--f-cond);text-align:right}
+.legend b{display:block;font:600 22px/1.2 var(--f-key)}
+.legend span{font:400 18px/1.35 var(--f-body);color:var(--ink-2)}
+
+/* ---------- check ---------- */
+.dm{position:absolute;left:820px;top:180px;width:700px;background:#fff;border:1.5px solid var(--rule);border-radius:6px;overflow:hidden;font-family:var(--f-body)}
+.dm .h{display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);font:600 17px var(--f-key)}
+.dm .h span{font:500 14px var(--f-body);color:var(--ink-3)}
+.dm .row{display:flex;gap:10px;align-items:center;padding:8px 14px;border-bottom:1px solid #EEF1F3;font:400 16px var(--f-body);color:var(--ink-2)}
+.dm .row .ic{width:16px;height:16px;border-radius:50%;flex:none}
+.dm .row .ic.e{background:var(--err)}.dm .row .ic.ok{background:var(--ok)}.dm .row .ic.f{background:#C8CFD6;border-radius:3px}
+.dm .bad{transition:opacity .3s}
+.s1 .dm .bad{display:none}
+.dm .good{display:none}
+.s1 .dm .good{display:flex}
+.dm .sub{padding-left:40px}
+
+/* ---------- layout (dark) ---------- */
+.lay{position:absolute;left:760px;top:140px;width:760px}
+.lay svg{width:760px;height:auto;display:block;overflow:visible}
+.lay .pad{fill:#6B3A36}
+.lay .pad.key{fill:var(--cu-top)}
+.lay .body{fill:#1A252E;stroke:var(--silk);stroke-width:2}
+.lay .part .p{fill:var(--cu-top)}
+.lay .part .o{fill:none;stroke:var(--silk);stroke-width:1.6}
+.lay text{font:600 14px var(--f-key);fill:var(--board-ink)}
+.lay text.s{fill:var(--silk);font-size:13px}
+.lay .edge{fill:none;stroke:var(--edge);stroke-width:3}
+.lay .tr{fill:none;stroke:var(--cu-top);stroke-width:3;stroke-linecap:round}
+
+/* ---------- tasks ---------- */
+.tasks{position:absolute;left:96px;top:186px;width:1410px;display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.task{background:var(--paper-hi);border:1.5px solid var(--rule);border-radius:10px;padding:16px 20px 14px;display:flex;flex-direction:column}
+.task h3{margin:0 0 4px;font:600 26px/1.1 var(--f-cond);display:flex;gap:10px;align-items:center}
+.task .pins{font:600 16px var(--f-key);color:var(--ink-3);margin-bottom:8px}
+.task p{margin:0 0 10px;font:400 17px/1.38 var(--f-body);color:var(--ink-2);flex:1}
+.task p b{color:var(--ink);font-weight:600}
+.task .own{display:flex;gap:8px;align-items:flex-end;font:500 15px var(--f-body);color:var(--ink-3)}
+.task .own i{flex:1;border-bottom:1.5px solid var(--rule);height:16px}
+.task .st{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;border:2px solid var(--net);color:var(--net);font:600 16px var(--f-key);flex:none}
+
+/* ---------- sheets ---------- */
+.sheets3{position:absolute;left:96px;top:300px;width:1410px;height:380px}
+.sheets3 svg{width:1410px;height:380px;overflow:visible}
+.sheets3 .pg{fill:#fff;stroke:var(--rule);stroke-width:1.5}
+.sheets3 .pgt{font:600 22px var(--f-cond);fill:var(--ink)}
+.sheets3 .tab{font:500 15px var(--f-body);fill:var(--ink-2)}
+.sheets3 .lnk{fill:none;stroke:var(--net);stroke-width:2.5;stroke-dasharray:8 7;opacity:0;transition:opacity .5s}
+.s1 .sheets3 .lnk{opacity:1}
+.agree{position:absolute;left:96px;top:196px;width:1410px;font:400 21px/1.4 var(--f-body);color:var(--ink-2)}
+.agree .nl{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.agree .nl .net{font-size:18px;padding:3px 9px}
+
+/* ---------- faq ---------- */
+.faq{position:absolute;left:96px;top:186px;width:1410px;display:grid;grid-template-columns:1fr 1fr;gap:16px 48px}
+.faq div{border-bottom:1px solid var(--line);padding-bottom:12px}
+.faq b{display:block;font:600 22px/1.25 var(--f-key);color:var(--ink);margin-bottom:4px}
+.faq span{font:400 18.5px/1.4 var(--f-body);color:var(--ink-2)}
+
+.res{list-style:none;margin:28px 0 0;padding:0;columns:2;column-gap:64px;width:1400px}
+.res li{break-inside:avoid;margin-bottom:20px;font:400 19px/1.35 var(--f-body);color:var(--ink-2)}
+.res a{display:block;font:600 22px var(--f-key);color:var(--ink);text-decoration:none;border-bottom:1.5px solid var(--rule);width:max-content;margin-bottom:2px}
+.res a:hover{border-color:var(--net)}
+.res a:focus-visible{outline:3px solid var(--hl);outline-offset:3px}
+
+#notes{position:fixed;left:0;right:0;bottom:0;max-height:38vh;overflow:auto;background:#0F161C;color:#E6ECF1;font:400 19px/1.55 var(--f-body);padding:16px 28px 20px;transform:translateY(105%);transition:transform .3s ease;z-index:10;border-top:3px solid var(--net)}
+#notes h5{margin:0 0 6px;font:600 14px var(--f-key);color:#97A5B2}
+body.show-notes #notes{transform:none}
+#help{position:fixed;right:16px;bottom:16px;background:#0F161C;color:#E6ECF1;font:400 15px/1.6 var(--f-body);padding:12px 16px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:11}
+#help kbd{font-size:13px;padding:0 6px 1px;border-bottom-width:2px;background:#22303B;border-color:#44545F;color:#fff}
+body.show-help #help{opacity:1}
+#navbtns{position:fixed;left:14px;bottom:14px;display:flex;gap:6px;z-index:9;opacity:0;transition:opacity .3s}
+body.pointer #navbtns{opacity:.7}
+#navbtns button{width:42px;height:38px;border-radius:7px;border:0;background:#0F161C;color:#fff;font:600 20px var(--f-key);cursor:pointer}
+#navbtns button:focus-visible{outline:3px solid var(--hl)}
+.notes{display:none}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01s!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:.01s!important;transition-delay:0s!important}
+}
+
+/* ================= part 2 additions ================= */
+.chips{position:absolute;left:96px;top:744px;width:960px;display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;z-index:2}
+.chips .lbl{font:600 15px var(--f-key);color:var(--ink-3);margin-right:2px}
+.pc{display:inline-flex;align-items:baseline;gap:7px;background:var(--paper-hi);border:1.5px solid var(--line);border-radius:6px;padding:4px 10px 5px;font:400 16px var(--f-body);color:var(--ink-2);white-space:nowrap}
+.pc b{font:600 17px var(--f-key);color:var(--ink)}
+.pc i{font:600 16px var(--f-key);font-style:normal;color:var(--net-ink);background:var(--net-tint);border-radius:4px;padding:0 6px 1px}
+.pc em{font:600 12px var(--f-key);font-style:normal;padding:1px 5px 2px;border-radius:3px;border:1px solid}
+.pc em.B{color:#0B5E55;background:#D8F0EC;border-color:#0F7F73}
+.pc em.E{color:#8A5300;background:#FCEBD0;border-color:#B26B00}
+.pc em.K{color:var(--ink-2);background:#fff;border-color:var(--ink-3);border-style:dashed}
+.right{position:absolute;left:820px;top:186px;width:700px}
+.right svg{display:block;width:100%;height:auto;overflow:visible}
+.cap-note{font:400 16px/1.35 var(--f-body);color:var(--ink-3);margin-top:8px}
+
+/* title tray */
+.tray{position:absolute;left:868px;top:112px;width:648px;height:630px}
+.tray svg{width:648px;height:630px;overflow:visible}
+.tray .cell{opacity:0;transform:translateY(10px)}
+.active .tray .cell{animation:pop .45s ease forwards}
+.tray .bin{fill:var(--paper-hi);stroke:var(--line);stroke-width:1.5}
+.tray .ref{font:600 19px var(--f-key);fill:var(--ink);text-anchor:middle}
+.tray .what{font:400 15px var(--f-body);fill:var(--ink-2);text-anchor:middle}
+
+/* anatomy */
+.anat{position:absolute;left:96px;top:356px;width:1410px;display:grid;grid-template-columns:130px 330px 150px 210px 330px 170px 90px;background:var(--paper-hi);border:1.5px solid var(--rule);border-radius:8px;overflow:hidden}
+.anat div{padding:12px 14px 13px;border-left:1px solid var(--line);transition:background-color .3s,box-shadow .3s;min-width:0}
+.anat div:first-child{border-left:0}
+.anat .h{font:600 14px var(--f-key);color:var(--ink-3);display:block;margin-bottom:6px}
+.anat b{display:block;font:600 24px/1.15 var(--f-key);color:var(--ink)}
+.anat small{display:block;font:400 18px/1.3 var(--f-body);color:var(--ink-2);margin-top:2px}
+.anat .lc b{display:inline-block;font:600 25px/1.15 var(--f-key);color:var(--net-ink);background:var(--net-tint);border-radius:5px;padding:0 8px 2px}
+.anat .mf b{font-size:21px;letter-spacing:.01em}
+.anat .cl b{display:inline-block;font:600 18px var(--f-key);color:#0B5E55;background:#D8F0EC;border:1.5px solid #0F7F73;border-radius:5px;padding:2px 9px 3px}
+.slide[data-cur="1"] .anat .c1,.slide[data-cur="2"] .anat .c2,.slide[data-cur="3"] .anat .c3,.slide[data-cur="4"] .anat .c4,.slide[data-cur="5"] .anat .c5,.slide[data-cur="6"] .anat .c6{background:#FFF1D6;box-shadow:inset 0 0 0 3px var(--hl)}
+.co{position:absolute;width:310px;font:400 19px/1.35 var(--f-body);color:var(--ink-2);padding:2px 0 2px 14px;border-left:4px solid var(--hl)}
+.co b{display:block;font:600 21px var(--f-key);color:var(--ink);margin-bottom:2px}
+.co::after{content:"";position:absolute;left:-4px;width:4px;background:var(--hl)}
+.co.up{bottom:560px}.co.up::after{top:100%;height:16px}
+.co.dn{top:478px}.co.dn::after{bottom:100%;height:20px}
+
+/* decode */
+.dec{position:absolute;left:96px;width:1410px;display:grid;column-gap:6px}
+.dec .seg{text-align:center}
+.dec .seg .t{display:block;font:600 64px/1 var(--f-cond);color:var(--ink);padding-bottom:8px;border-bottom:6px solid var(--line);transition:border-color .3s,color .3s}
+.dec .seg .d{display:block;font:400 18px/1.3 var(--f-body);color:var(--ink-2);margin-top:9px;padding:0 4px}
+.dec .seg .d b{display:block;font:600 19px var(--f-key);color:var(--ink)}
+.dec .seg.dim .t{color:var(--ink-3)}
+.dec .seg.dim .d{color:var(--ink-3)}
+.dec .seg.k1 .t{border-color:#1D5DBF}.dec .seg.k2 .t{border-color:#8B3FB5}.dec .seg.k3 .t{border-color:#B26B00}.dec .seg.k4 .t{border-color:#0F7F73}.dec .seg.k5 .t{border-color:#C62828}.dec .seg.k6 .t{border-color:#17212B}
+.dec .lab{position:absolute;left:0;top:-30px;font:600 17px var(--f-key);color:var(--ink-3)}
+.big .seg .t{font-size:104px}
+.codes{position:absolute;left:96px;top:676px;width:960px;display:flex;gap:34px;font:400 19px/1.35 var(--f-body);color:var(--ink-2)}
+.codes b{font:600 20px var(--f-key);color:var(--ink)}
+
+/* tables */
+.tb{position:absolute;left:96px;top:186px;width:1410px;border-collapse:collapse;font:400 19px/1.35 var(--f-body)}
+.tb th{text-align:left;font:600 15px var(--f-key);color:var(--ink-3);padding:6px 12px;border-bottom:1.5px solid var(--ink-2)}
+.tb td{padding:11px 12px;border-bottom:1px solid var(--line);color:var(--ink-2);vertical-align:top}
+.tb td:first-child{font:600 22px var(--f-key);color:var(--ink);white-space:nowrap}
+.tb td b{color:var(--ink);font-weight:600}
+.tb td .pc{font-size:15px;padding:2px 8px 3px;margin:2px 4px 2px 0}
+.tb td .pc i{font-size:14px}
+
+/* curve */
+.curve{position:absolute;left:96px;top:520px;width:620px}
+.curve svg{width:620px;height:auto;display:block;overflow:visible}
+.curve .ax{stroke:var(--ink-2);stroke-width:2;fill:none}
+.curve text{font:600 15px var(--f-key);fill:var(--ink-2)}
+.curve .cv{fill:none;stroke-width:4;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset 1.2s ease}
+.s1 .curve .cv{stroke-dashoffset:0}
+.take{position:absolute;left:800px;top:540px;width:700px;font:400 21px/1.42 var(--f-body);color:var(--ink-2)}
+.take b{color:var(--ink)}
+
+/* small tables on the right */
+.mini{width:100%;border-collapse:collapse;font:400 18px/1.35 var(--f-body);margin-top:6px}
+.mini th{text-align:left;font:600 14px var(--f-key);color:var(--ink-3);padding:5px 10px;border-bottom:1.5px solid var(--ink-2)}
+.mini td{padding:8px 10px;border-bottom:1px solid var(--line);color:var(--ink-2);vertical-align:top}
+.mini td:first-child{font:600 18px var(--f-key);color:var(--ink);white-space:nowrap}
+
+/* power path */
+.pp{position:absolute;left:96px;top:176px;width:1410px}
+.pp svg{width:1410px;height:auto;display:block;overflow:visible}
+.pp .bx{fill:var(--paper-hi);stroke:var(--ink-2);stroke-width:2}
+.pp .bt{font:600 21px var(--f-key);fill:var(--ink)}
+.pp .bs{font:400 15px var(--f-body);fill:var(--ink-2)}
+.pp .ln{fill:none;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}
+.pp .pw{stroke:#C62828}.pp .dt{stroke:#0F7F73}.pp .cc{stroke:#8B3FB5}
+.caps3{position:absolute;left:96px;top:630px;width:960px;display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.caps3 div{font:400 18px/1.38 var(--f-body);color:var(--ink-2);border-top:4px solid var(--line);padding-top:8px}
+.caps3 div b{display:block;font:600 21px var(--f-key);color:var(--ink);margin-bottom:2px}
+.caps3 .c1{border-color:#C62828}.caps3 .c2{border-color:#0F7F73}.caps3 .c3{border-color:#8B3FB5}
+
+/* cc */
+.only1{transition:opacity .4s}
+.s2 .only1{opacity:.12}
+
+/* regulator calc */
+.calc{position:absolute;left:820px;top:478px;width:700px;background:var(--paper-hi);border:1.5px solid var(--rule);border-radius:10px;padding:16px 22px 18px}
+.calc label{display:flex;justify-content:space-between;align-items:baseline;font:600 20px var(--f-key);color:var(--ink)}
+.calc output{font:600 30px var(--f-cond);color:var(--net-ink)}
+.calc input{width:100%;margin:10px 0 14px;accent-color:var(--net);height:26px;cursor:pointer}
+.calc .rs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+.calc .rs>div{border-top:1px solid var(--line);padding-top:8px}
+.calc .rs span{display:block;font:500 15px var(--f-body);color:var(--ink-3)}
+.calc .rs b{display:block;font:600 34px/1.1 var(--f-cond);color:var(--ink)}
+.calc .rs>div>i{display:block;font:400 14px/1.3 var(--f-body);font-style:normal;color:var(--ink-3)}
+.calc .bar{height:8px;background:var(--line);border-radius:4px;margin-top:5px;overflow:hidden}
+.calc .bar i{display:block;height:100%;width:20%;background:var(--ok);border-radius:4px;transition:width .2s,background-color .2s}
+
+/* led */
+.ledf{position:absolute;left:820px;top:186px;width:700px;font:600 34px var(--f-cond);color:var(--ink);text-align:center;padding:14px 0 16px;border:1.5px solid var(--rule);border-radius:10px;background:var(--paper-hi)}
+.ledf small{display:block;font:400 17px var(--f-body);color:var(--ink-3);margin-top:4px}
+.ledc{position:absolute;left:820px;width:700px;display:grid;grid-template-columns:110px 1fr;gap:22px;align-items:center;padding:16px 20px;border:1.5px solid var(--rule);border-radius:10px;background:var(--paper-hi)}
+.ledc .bulb{width:76px;height:76px;border-radius:50%;margin:0 auto;border:3px solid rgba(0,0,0,.25)}
+.ledc.red .bulb{background:#E53935;box-shadow:0 0 22px 10px rgba(229,57,53,.55),0 0 60px 22px rgba(229,57,53,.25)}
+.ledc.green .bulb{background:#7FB08A;box-shadow:0 0 6px 1px rgba(76,175,80,.25)}
+.ledc h4{margin:0 0 4px;font:600 26px var(--f-cond);color:var(--ink)}
+.ledc p{margin:0;font:400 19px/1.4 var(--f-body);color:var(--ink-2)}
+.ledc p b{color:var(--ink)}
+.ledc .eq{font:600 22px var(--f-key);color:var(--net-ink)}
+
+/* crystal */
+.spec{width:100%;border-collapse:collapse;font:400 19px var(--f-body);background:var(--paper-hi);border:1.5px solid var(--rule);border-radius:10px;overflow:hidden}
+.spec caption{text-align:left;font:600 24px var(--f-cond);color:var(--ink);padding:0 0 8px}
+.spec td{padding:8px 14px;border-bottom:1px solid var(--line);color:var(--ink-2)}
+.spec td:last-child{font:600 20px var(--f-key);color:var(--ink);text-align:right}
+.spec tr:last-child td{border-bottom:0}
+.fbox{position:absolute;left:820px;top:470px;width:700px;border-left:4px solid var(--hl);padding:4px 0 4px 16px;font:400 20px/1.45 var(--f-body);color:var(--ink-2)}
+.fbox .eq{display:block;font:600 30px/1.3 var(--f-cond);color:var(--ink)}
+.gauge{position:absolute;left:820px;top:600px;width:700px}
+.gauge .lbl{display:flex;justify-content:space-between;font:600 17px var(--f-key);color:var(--ink-2);margin-bottom:8px}
+.gauge .trk{position:relative;height:30px;background:#E3E7EA;border-radius:6px}
+.gauge .band{position:absolute;top:0;bottom:0;left:35.83%;width:13.33%;background:var(--ok);border-radius:4px}
+.gauge .lim{position:absolute;top:-8px;bottom:-8px;left:83.33%;width:4px;background:var(--err);border-radius:2px}
+.gauge .ticks{position:relative;height:22px;font:600 14px var(--f-key);color:var(--ink-3)}
+.gauge .ticks span{position:absolute;top:6px;transform:translateX(-50%)}
+.gauge .ann{display:flex;justify-content:space-between;font:400 17px var(--f-body);color:var(--ink-2);margin-top:6px}
+.gauge .ann b{color:var(--ink)}
+
+/* lse chain */
+.chain{position:absolute;left:820px;top:200px;width:700px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px 26px}
+.chain span{position:relative;display:block;text-align:center;font:600 24px var(--f-key);color:var(--ink);background:var(--paper-hi);border:1.5px solid var(--line);border-radius:8px;padding:10px 0;opacity:0;transform:translateY(8px)}
+.s1 .chain span{animation:pop .3s ease forwards}
+.chain span:not(:nth-child(4n))::after{content:"÷2";position:absolute;right:-26px;top:50%;width:26px;transform:translateY(-50%);font:600 13px var(--f-key);color:var(--ink-3);text-align:center}
+.chain span.last{background:#FCEBD0;border-color:#B26B00;color:#8A5300}
+.chain-cap{position:absolute;left:820px;top:520px;width:700px;font:400 19px/1.4 var(--f-body);color:var(--ink-2)}
+.chain-cap b{color:var(--ink)}
+
+/* nucleo wiring */
+.nw{position:absolute;left:760px;top:150px;width:770px}
+.nw svg{width:770px;height:auto;display:block;overflow:visible}
+.nw .brd{fill:#F7F9FA;stroke:var(--ink-2);stroke-width:2}
+.nw .brd2{fill:#1A252E;stroke:#33424F;stroke-width:2}
+.nw text{font:600 16px var(--f-key);fill:var(--ink)}
+.nw .lt{fill:var(--board-ink)}
+.nw .sm{font:400 14px var(--f-body);fill:var(--ink-2)}
+.nw .pinh{fill:#2A2F35}
+.nw .pinh2{fill:#E2C15A}
+.nw .jmp{fill:#3D6FD9;transition:transform .6s ease,opacity .6s ease}
+.s1 .nw .jmp{transform:translateY(-46px);opacity:0}
+.nw .x{opacity:0;transition:opacity .4s .4s}
+.s1 .nw .x{opacity:1}
+.nw .wire{fill:none;stroke-width:4;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .9s ease}
+.s2 .nw .wire{stroke-dashoffset:0}
+.nw .cab{fill:none;stroke:var(--ink-2);stroke-width:5;stroke-linecap:round}
+
+/* waffle */
+.waf{position:absolute;left:96px;top:186px;width:1410px;display:grid;grid-template-columns:2fr 1.45fr 1fr;gap:34px}
+.waf h3{margin:0 0 10px;font:600 28px var(--f-cond);display:flex;align-items:baseline;gap:10px;padding-bottom:6px;border-bottom:2px solid var(--ink)}
+.waf h3 span{font:600 44px/1 var(--f-cond)}
+.waf .g{display:grid;gap:8px}
+.waf .g2{grid-template-columns:1fr 1fr}
+.waf .t{border-radius:7px;padding:7px 11px 8px;border:1.5px solid}
+.waf .t b{display:block;font:600 19px var(--f-key);color:var(--ink)}
+.waf .t span{font:400 16px var(--f-body);color:var(--ink-2)}
+.waf .B .t{background:#E6F4F1;border-color:#0F7F73}
+.waf .E .t{background:#FDF1DD;border-color:#B26B00}
+.waf .K .t{background:#fff;border-color:var(--ink-3);border-style:dashed}
+.waf .B h3 span{color:#0F7F73}.waf .E h3 span{color:#B26B00}.waf .K h3 span{color:var(--ink-3)}
+.wnote{position:absolute;left:96px;top:676px;width:960px;font:400 19px/1.42 var(--f-body);color:var(--ink-2)}
+.wnote b{color:var(--ink)}
+
+/* checklist */
+.ck{list-style:none;margin:0;padding:0;position:absolute;left:96px;top:190px;width:880px}
+.ck li{display:grid;grid-template-columns:52px 1fr;gap:14px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line)}
+.ck li i{width:40px;height:40px;border-radius:50%;border:3px solid var(--rule);display:grid;place-items:center;font:600 22px/1 var(--f-key);font-style:normal;color:var(--ink-3);transition:background-color .3s,border-color .3s,color .3s}
+.ck li b{display:block;font:600 24px/1.2 var(--f-key);color:var(--ink)}
+.ck li span{font:400 18px/1.38 var(--f-body);color:var(--ink-2)}
+.slide[data-cur="1"] .ck li:nth-child(-n+1) i,.slide[data-cur="2"] .ck li:nth-child(-n+2) i,.slide[data-cur="3"] .ck li:nth-child(-n+3) i,.slide[data-cur="4"] .ck li:nth-child(-n+4) i,.slide[data-cur="5"] .ck li:nth-child(-n+5) i{background:var(--ok);border-color:var(--ok);color:#fff}
+.done{position:absolute;left:1040px;top:190px;width:476px;background:var(--paper-hi);border:1.5px solid var(--rule);border-radius:10px;padding:18px 22px}
+.done h3{margin:0 0 10px;font:600 28px var(--f-cond)}
+.done ul{margin:0;padding-left:20px;font:400 19px/1.45 var(--f-body);color:var(--ink-2)}
+.done li{margin-bottom:6px}
+
+/* rcc mock */
+.rcc{position:absolute;left:820px;width:700px;background:#fff;border:1.5px solid var(--rule);border-radius:8px;overflow:hidden;font-family:var(--f-body)}
+.rcc .hd{display:flex;justify-content:space-between;align-items:baseline;background:#EEF1F4;border-bottom:1px solid var(--line);padding:9px 14px;font:600 18px var(--f-key);color:var(--ink)}
+.rcc .hd span{font:500 14px var(--f-body);color:var(--ink-3)}
+.rcc .rw{display:grid;grid-template-columns:230px 1fr;align-items:center;padding:12px 14px;font:400 17px var(--f-body);color:var(--ink-2)}
+.rcc .dd{border:1.5px solid #AEB8C2;border-radius:4px;padding:6px 10px;font:600 18px var(--f-key);color:var(--ink);display:flex;justify-content:space-between;background:#fff}
+.rcc .dd.hot{border-color:var(--hl);box-shadow:0 0 0 3px #FBE3B0}
+.rcc .note{padding:0 14px 12px;font:400 16px/1.35 var(--f-body);color:var(--ink-3)}
+
+.s1 .lib .search .typed.n6{width:6.4ch;transition:width .6s steps(6)}
+.smap{position:absolute;left:96px;top:176px;width:1410px}
+.smap svg{width:1410px;height:auto;display:block;overflow:visible}
+.smap .pg{fill:#fff;stroke:var(--rule);stroke-width:1.5}
+.smap .pgt{font:600 24px var(--f-cond);fill:var(--ink)}
+.smap text.n{font-size:17px}
+.smap .lnk{fill:none;stroke:var(--net);stroke-width:2.5;stroke-dasharray:8 7;opacity:0;transition:opacity .5s}
+.s1 .smap .lnk{opacity:1}
+</style>
+</head>
+<body>
+<div id="viewport"><div id="deck">
+
+<!-- 1 Title -->
+<section class="slide" data-title="Introduction" data-part="–">
+  <div class="content" style="top:150px;width:700px">
+    <h1>Every part on the F446 board</h1>
+    <p class="lead" style="margin-top:34px">Part 2: what each component does, why we picked it, and how to find it in EasyEDA.</p>
+    <p class="hint">Arrow keys or a clicker move through. Press N for speaker notes.</p>
+  </div>
+  <div class="tray"><svg viewBox="0 0 648 630" aria-hidden="true" id="traySvg"></svg></div>
+  <aside class="notes">Part 1 wired the F446's core pins. This part goes through the 34 pieces that sit around it: what each one does, why it has that value, and the number you type into EasyEDA to get exactly that part. Everything here matches the printed parts list, so keep it next to you.</aside>
+</section>
+
+<!-- 2 Plan -->
+<section class="slide" data-title="Today's plan" data-part="–">
+  <div class="content wide"><h2>Today's plan</h2></div>
+  <svg class="road-trace" viewBox="0 0 1600 900" aria-hidden="true"><path pathLength="1" d="M160 369 H1440"/></svg>
+  <div class="stop" style="left:250px;animation-delay:.2s"><div class="pad">1</div><h3>Read a part</h3><p>What each column of the parts list means, and finding a part in EasyEDA.</p><span class="sl">Slides 3–5</span></div>
+  <div class="stop" style="left:617px;animation-delay:.7s"><div class="pad">2</div><h3>Sheet by sheet</h3><p>MCU core, power and USB, clocks and debug, signs of life.</p><span class="sl">Slides 6–20</span></div>
+  <div class="stop" style="left:983px;animation-delay:1.2s"><div class="pad">3</div><h3>Check it</h3><p>What it costs, how we verify a sheet, and mistakes to look for.</p><span class="sl">Slides 21–23</span></div>
+  <div class="stop" style="left:1350px;animation-delay:1.7s"><div class="pad" style="border-color:var(--ok);color:var(--ok)">4</div><h3>Thursday and next</h3><p>Testing on the Nucleo, the plan to the final, your questions.</p><span class="sl">Slides 24–26</span></div>
+  <aside class="notes">Four parts. The middle one is the long one: we go sheet by sheet in the same order as the schematic, so you can follow along on your printed parts list.</aside>
+</section>
+
+<!-- 3 Anatomy -->
+<section class="slide" data-title="Read a parts list row" data-part="1 Read" data-steps="6">
+  <div class="content wide"><h2>Read one row of the parts list</h2></div>
+  <div class="anat">
+    <div class="c1"><span class="h">Ref</span><b>C1–C4</b></div>
+    <div class="c2"><span class="h">Part and value</span><b>Decoupling cap</b><small>100 nF · 50 V · X7R</small></div>
+    <div class="c3"><span class="h">Package</span><b>0603</b></div>
+    <div class="c4 lc"><span class="h">LCSC #</span><b>C14663</b></div>
+    <div class="c5 mf"><span class="h">MFR part</span><b>CC0603KRX7R9BB104</b></div>
+    <div class="c6 cl"><span class="h">JLC class</span><b>Basic</b></div>
+    <div><span class="h">Qty</span><b>4</b></div>
+  </div>
+  <div class="co up" data-step="1" style="left:96px"><b>Designator</b>C for capacitor, R resistor, U chip, J connector, Y crystal. Same name on the schematic and the silkscreen.</div>
+  <div class="co dn" data-step="2" style="left:226px"><b>Part and value</b>What it does, then its numbers. For a capacitor: capacitance, voltage rating, dielectric.</div>
+  <div class="co up" data-step="3" style="left:556px"><b>Package</b>The footprint. 0603 is 1.6 × 0.8 mm: tiny, but still solderable by hand.</div>
+  <div class="co dn" data-step="4" style="left:706px"><b>LCSC number</b>The one number to search. Paste it into the library and you get this exact part.</div>
+  <div class="co up" data-step="5" style="left:916px"><b>Manufacturer part</b>The maker's own code. Check it matches before you place, and it spells out the specs.</div>
+  <div class="co dn" data-step="6" style="left:1196px"><b>Basic or Extended</b>Basic parts stay loaded at JLCPCB. Each Extended part adds a loading fee if they assemble.</div>
+  <aside class="notes">Every row of the printed parts list has these seven columns. Click through them. The two to remember: the designator is how we talk about a part, and the LCSC number is how we find it. Quantity is how many of that row go on one board.</aside>
+</section>
+
+<!-- 4 Decode -->
+<section class="slide" data-title="Decode a part number" data-part="1 Read" data-steps="3">
+  <div class="content wide"><h2>The part number spells out the specs</h2></div>
+  <div class="dec" style="top:226px;grid-template-columns:96px 140px 66px 50px 130px 56px 100px 110px" data-step="1">
+    <span class="lab">Yageo C14663: the 100 nF decoupling cap</span>
+    <div class="seg dim"><span class="t">CC</span><span class="d">Series</span></div>
+    <div class="seg k1"><span class="t">0603</span><span class="d"><b>Size</b>1.6 × 0.8 mm</span></div>
+    <div class="seg k2"><span class="t">K</span><span class="d"><b>±10%</b></span></div>
+    <div class="seg dim"><span class="t">R</span><span class="d">Reel</span></div>
+    <div class="seg k3"><span class="t">X7R</span><span class="d"><b>Dielectric</b></span></div>
+    <div class="seg k5"><span class="t">9</span><span class="d"><b>50 V</b></span></div>
+    <div class="seg dim"><span class="t">BB</span><span class="d">Process</span></div>
+    <div class="seg k4"><span class="t">104</span><span class="d"><b>100 nF</b></span></div>
+  </div>
+  <div class="dec" style="top:430px;grid-template-columns:76px 66px 56px 110px 50px 56px 160px" data-step="2">
+    <span class="lab">Samsung C19666: the 4.7 µF bulk cap</span>
+    <div class="seg dim"><span class="t">CL</span><span class="d">Series</span></div>
+    <div class="seg k1"><span class="t">10</span><span class="d"><b>0603</b></span></div>
+    <div class="seg k3"><span class="t">A</span><span class="d"><b>X5R</b></span></div>
+    <div class="seg k4"><span class="t">475</span><span class="d"><b>4.7 µF</b></span></div>
+    <div class="seg k2"><span class="t">K</span><span class="d"><b>±10%</b></span></div>
+    <div class="seg k5"><span class="t">O</span><span class="d"><b>16 V</b></span></div>
+    <div class="seg dim"><span class="t">8NNNC</span><span class="d">Thickness, plating, reel</span></div>
+  </div>
+  <div class="dec" style="top:430px;left:1000px;width:506px;grid-template-columns:120px 76px 60px 110px 90px" data-step="3">
+    <span class="lab">UNI-ROYAL C25804: R1, 10 kΩ</span>
+    <div class="seg k1"><span class="t">0603</span><span class="d"><b>Size</b></span></div>
+    <div class="seg dim"><span class="t">WA</span><span class="d">Series</span></div>
+    <div class="seg k2"><span class="t">F</span><span class="d"><b>±1%</b></span></div>
+    <div class="seg k4"><span class="t">1002</span><span class="d"><b>10 kΩ</b></span></div>
+    <div class="seg dim"><span class="t">T5E</span><span class="d">Reel</span></div>
+  </div>
+  <div class="codes" data-step="1" style="width:840px"><div><b>Capacitors, 3 digits, in pF:</b> two digits, then that many zeros. 104 is 10 and four zeros: 100 000 pF = 100 nF. 475 is 47 and five zeros: 4.7 µF.</div></div>
+  <div class="codes" data-step="3" style="left:1000px;width:506px"><div><b>Resistors, 4 digits, in Ω:</b> three digits, then zeros. 1002 is 100 and two zeros: 10 kΩ. 5101 is 5.1 kΩ.</div></div>
+  <aside class="notes">You don't need to memorise these codes, but they let you check a part at a glance. The coloured parts are the ones that matter: size, tolerance, dielectric, voltage and value. Grey parts are the maker's series and packing codes. Each maker uses its own order, which is why the Yageo and Samsung codes look so different for the same kind of part.</aside>
+</section>
+
+<!-- 5 Library -->
+<section class="slide" data-title="Find it in EasyEDA" data-part="1 Read" data-steps="3">
+  <div class="content">
+    <h2>Find any part in ten seconds</h2>
+    <ul class="points">
+      <li><kbd>Shift</kbd><span class="plus">+</span><kbd>F</kbd>, then paste the LCSC number from the parts list.</li>
+      <li data-step="2">Check the result matches: same manufacturer part, same footprint, the class you expect.</li>
+      <li data-step="3">Click <b>Place</b>, then click on the sheet. EasyEDA brings the symbol, the footprint and the 3D model together.</li>
+      <li class="aside">Searching "100nF" gives thousands of results. The C-number gives one.</li>
+    </ul>
+    <p class="warn" data-step="3"><b>Placing C2 to C4?</b> Copy and paste C1 instead of searching again. EasyEDA numbers the copies.</p>
+  </div>
+  <div class="lib">
+    <div class="r"><span class="lab">Search Engine</span><span class="chipbtn on">EasyEDA</span><span>LCSC Electronics</span><span class="search"><span class="typed n6">C14663</span></span></div>
+    <div class="r"><span class="lab">Types</span><span class="chipbtn on">Symbol</span><span>Footprint</span><span>3D Model</span></div>
+    <div class="r"><span class="lab">Classes</span><span>Work Space(0)</span><span class="chipbtn on cls-l">LCSC(1)</span><span>JLCPCB Assembled(1)</span></div>
+    <table class="rows"><thead><tr><th>Title (PartNO)</th><th>Footprint</th><th>JLCPCB Part Class</th></tr></thead>
+      <tbody><tr class="pick"><td class="pnc">CC0603KRX7R9BB104</td><td>C0603</td><td>Basic Part</td></tr></tbody></table>
+    <div class="btns"><span>Edit</span><span class="pl">Place</span><span class="cn">Cancel</span></div>
+  </div>
+  <aside class="notes">This is a simplified drawing of the library window. The habit to build: always search by the C-number from the parts list, then glance at the manufacturer part before placing. Once placed, copy and paste the part for C2 to C4 instead of searching again; EasyEDA numbers the copies for you.</aside>
+</section>
+
+<!-- 6 Sheets -->
+<section class="slide" data-title="Four sheets" data-part="2 Sheets" data-steps="1">
+  <div class="content wide"><h2>Four sheets, one board</h2></div>
+  <div class="smap"><svg viewBox="0 0 1410 560" aria-hidden="true" id="mapSvg" class="schem"></svg></div>
+  <aside class="notes">Each sheet is one job. Sheet_1 holds U1 and the parts that sit right on its pins. The other three hang off it, joined only by net labels with matching names. Click to show which names connect which sheets. +3V3 and GND flags appear on every sheet as well.</aside>
+</section>
+
+<!-- 7 U1 -->
+<section class="slide" data-title="U1: the chip" data-part="2 Sheets" data-steps="2">
+  <div class="content wide"><h2>U1: what the name STM32F446RET6 tells you</h2></div>
+  <div class="dec big" style="top:216px;grid-template-columns:300px 150px 150px 120px 120px 120px 120px">
+    <div class="seg dim"><span class="t">STM32</span><span class="d"><b>Family</b>ST's 32-bit Arm chips</span></div>
+    <div class="seg k1"><span class="t">F4</span><span class="d"><b>Line</b>Cortex-M4 with floating point</span></div>
+    <div class="seg k2"><span class="t">46</span><span class="d"><b>Model</b>180 MHz, Quad‑SPI, audio</span></div>
+    <div class="seg k3"><span class="t">R</span><span class="d"><b>64 pins</b></span></div>
+    <div class="seg k4"><span class="t">E</span><span class="d"><b>512 KB</b>flash</span></div>
+    <div class="seg k5"><span class="t">T</span><span class="d"><b>LQFP</b>package</span></div>
+    <div class="seg k6"><span class="t">6</span><span class="d"><b>−40 to 85 °C</b></span></div>
+  </div>
+  <div class="dec" style="top:540px;grid-template-columns:300px 150px 150px 120px 120px 120px 120px" data-step="2">
+    <span class="lab">Board A, for comparison</span>
+    <div class="seg dim"><span class="t">STM32</span></div>
+    <div class="seg dim"><span class="t">F4</span></div>
+    <div class="seg k2"><span class="t">07</span><span class="d">Ethernet, camera</span></div>
+    <div class="seg k3"><span class="t">V</span><span class="d"><b>100 pins</b></span></div>
+    <div class="seg k4"><span class="t">G</span><span class="d"><b>1 MB</b></span></div>
+    <div class="seg dim"><span class="t">T</span></div>
+    <div class="seg dim"><span class="t">6</span></div>
+  </div>
+  <div class="chips"><span class="lbl">In the parts list</span><span class="pc"><b>U1</b>STM32F446RET6<i>C69336</i><em class="E">Extended</em></span><span class="pc">Same chip as the Nucleo-F446RE</span></div>
+  <aside class="notes">Every STM32 name decodes the same way, so you can read any of them. The letters after the model number are the ones you choose: R for 64 pins, E for 512 KB of flash, T for the LQFP package you can solder by hand, 6 for the industrial temperature range. Click to compare Board A, the F407: V means 100 pins and G means 1 MB of flash. We picked the F446 because it's the chip on our Nucleo, so everything we test there carries over.</aside>
+</section>
+
+<!-- 8 Decoupling -->
+<section class="slide" data-title="Decoupling" data-part="2 Sheets" data-steps="2">
+  <div class="content">
+    <h2>100 nF at every power pin</h2>
+    <ul class="points">
+      <li data-step="1">The chip pulls current in short bursts on every clock edge. A capacitor right next to each VDD pin delivers them.</li>
+      <li data-step="2">What matters is the loop: capacitor, pin, back through ground. A small loop keeps the supply clean.</li>
+      <li class="aside">C6 (4.7 µF) refills the small ones. It can sit anywhere on +3V3.</li>
+    </ul>
+  </div>
+  <div class="right" style="top:176px"><svg viewBox="0 0 700 460" aria-hidden="true" id="decSvg"></svg></div>
+  <div class="chips"><span class="lbl">In the parts list</span><span class="pc"><b>C1–C5</b>100 nF X7R<i>C14663</i><em class="B">Basic</em></span><span class="pc"><b>C6</b>4.7 µF X5R<i>C19666</i><em class="B">Basic</em></span></div>
+  <aside class="notes">On the schematic the five 100 nF caps can sit in a row. On the PCB, each must be right at its own VDD and VSS pair. The drawings show why: the fast current flows around the shaded loop, and a bigger loop acts like a bigger inductor, so the supply bounces. C5 is the one on VBAT, pin 1.</aside>
+</section>
+
+<!-- 9 Dielectrics -->
+<section class="slide" data-title="Capacitor types" data-part="2 Sheets" data-steps="1">
+  <div class="content wide"><h2>C0G, X7R, X5R: why it matters which</h2></div>
+  <table class="tb">
+    <thead><tr><th>Type</th><th>What it is</th><th>Where we use it</th><th>Watch out</th></tr></thead>
+    <tbody>
+      <tr><td>C0G</td><td>Capacitance barely changes with voltage or temperature.</td><td>C11–C14: the crystal load caps</td><td>Only small values, so pF-sized jobs.</td></tr>
+      <tr><td>X7R</td><td>Stays within ±15% from −55 to 125 °C.</td><td>C1–C5, C8, C10: the 100 nF caps</td><td>Loses capacitance as DC voltage rises.</td></tr>
+      <tr><td>X5R</td><td>Stays within ±15% from −55 to 85 °C. More µF in a small case.</td><td>C6, C7, C9, C15, C16: 1 to 10 µF</td><td>The same DC-voltage loss, often more.</td></tr>
+    </tbody>
+  </table>
+  <div class="curve"><svg viewBox="0 0 620 230" aria-hidden="true" id="curveSvg"></svg></div>
+  <div class="take" data-step="1"><b>Rule of thumb:</b> rate an X5R or X7R cap for at least twice the voltage it sits on. That's why the 10 µF caps on the 5 V rail are 10 V parts. Crystal caps must be C0G, or the clock drifts with temperature.</div>
+  <aside class="notes">The drawing is an illustration of the trend, not real curves; each maker publishes the real DC-bias curve for each part on its product page. The point is that a 10 µF X5R cap at its full rated voltage can be well under 10 µF. Leaving a 2× margin keeps enough of it.</aside>
+</section>
+
+<!-- 10 VDDA VCAP -->
+<section class="slide" data-title="VDDA and VCAP" data-part="2 Sheets" data-steps="2">
+  <div class="content">
+    <h2>The analog supply and VCAP</h2>
+    <ul class="points">
+      <li data-step="1">FB1 is a ferrite bead: 0.45 Ω for DC, 600 Ω at 100 MHz. Power passes, digital noise doesn't.</li>
+      <li data-step="1">C7 (1 µF) and C8 (100 nF) hold <span class="net p">VDDA</span> steady, because the ADC measures against it.</li>
+      <li data-step="2">C9 on <span class="net c">VCAP</span>: 4.7 µF with ESR under 1 Ω. Any ceramic easily meets that.</li>
+    </ul>
+    <p class="warn" data-step="2"><b>VCAP never goes to 3.3 V.</b> It's the output of the chip's own 1.2 V core regulator.</p>
+  </div>
+  <div class="right" style="top:250px"><svg viewBox="0 0 700 230" aria-hidden="true" id="vddaSvg" class="schem"></svg></div>
+  <div class="chips"><span class="lbl">In the parts list</span><span class="pc"><b>FB1</b>600 Ω bead<i>C1002</i><em class="B">Basic</em></span><span class="pc"><b>C7</b>1 µF<i>C15849</i><em class="B">Basic</em></span><span class="pc"><b>C8</b>100 nF<i>C14663</i><em class="B">Basic</em></span><span class="pc"><b>C9</b>4.7 µF<i>C19666</i><em class="B">Basic</em></span></div>
+  <aside class="notes">The bead is rated 200 mA, far more than VDDA draws. If you can't get a bead, a 0 Ω resistor in its place works for a first board. ESR is the capacitor's internal resistance; tantalum and electrolytic caps can be above 1 Ω, which is why we use a ceramic on VCAP.</aside>
+</section>
+
+<!-- 11 Reset boot -->
+<section class="slide" data-title="Reset and boot" data-part="2 Sheets" data-steps="2">
+  <div class="content">
+    <h2>Reset and boot</h2>
+    <ul class="points">
+      <li data-step="1">C10 (100 nF) on <span class="net c">NRST</span> filters noise so the chip doesn't reset by itself. NRST has a pull-up inside, so no resistor.</li>
+      <li data-step="1">SW1 shorts NRST to GND: press it to restart.</li>
+      <li data-step="2">R1 (10 kΩ) holds <span class="net c">BOOT0</span> low. It's weak on purpose, so a jumper to 3.3 V can still win.</li>
+    </ul>
+  </div>
+  <div class="right" style="top:200px"><svg viewBox="0 0 700 220" aria-hidden="true" id="rstSvg" class="schem"></svg>
+    <table class="mini" data-step="2" style="margin-top:28px"><thead><tr><th>BOOT0</th><th>Starts from</th><th>So</th></tr></thead>
+      <tbody><tr><td>Low (R1)</td><td>Main flash</td><td>Your program runs</td></tr><tr><td>High</td><td>System memory</td><td>ST's bootloader, over USB or UART</td></tr></tbody></table>
+  </div>
+  <div class="chips"><span class="lbl">In the parts list</span><span class="pc"><b>C10</b>100 nF<i>C14663</i><em class="B">Basic</em></span><span class="pc"><b>SW1</b>tactile switch<i>C318884</i><em class="K">Check</em></span><span class="pc"><b>R1</b>10 kΩ<i>C25804</i><em class="B">Basic</em></span></div>
+  <aside class="notes">A floating BOOT0 is a classic first-board bug: the board sometimes starts ST's bootloader instead of your program and looks dead. If you ever do pull BOOT0 high to use the bootloader, PB2 (BOOT1) must be low too. The switch has four pads joined in pairs; check the symbol so it really shorts NRST to ground.</aside>
+</section>
+
+<!-- 12 Power path -->
+<section class="slide" data-title="Sheet_2 overview" data-part="2 Sheets" data-steps="3">
+  <div class="content wide"><h2>Sheet_2: 5 V in, 3.3 V out, USB data through</h2></div>
+  <div class="pp"><svg viewBox="0 0 1410 440" aria-hidden="true" id="ppSvg" class="schem"></svg></div>
+  <div class="caps3">
+    <div class="c1" data-step="1"><b>Power</b>VBUS to U2, which makes +3V3 for U1, VDDA and the power LED.</div>
+    <div class="c2" data-step="2"><b>Data</b>D+ and D− pass through U3's ESD clamps to PA12 and PA11.</div>
+    <div class="c3" data-step="3"><b>Handshake</b>R2 and R3 on CC1 and CC2 tell a charger to turn 5 V on.</div>
+  </div>
+  <aside class="notes">This is the whole of Sheet_2 in one picture. Three paths come out of the USB-C connector: power, data and the CC handshake. The next four slides take each part in turn.</aside>
+</section>
+
+<!-- 13 CC -->
+<section class="slide" data-title="USB-C and CC" data-part="2 Sheets" data-steps="2">
+  <div class="content">
+    <h2>USB-C: why two 5.1 kΩ resistors</h2>
+    <ul class="points">
+      <li data-step="1">A USB-C charger keeps VBUS off until it sees a 5.1 kΩ pull-down on a CC pin. Then it turns 5 V on.</li>
+      <li data-step="2">Flip the plug and the charger talks on the other CC pin. So CC1 and CC2 each get their own resistor.</li>
+      <li class="aside">D+ and D− appear twice for the same reason. Join each pair.</li>
+    </ul>
+  </div>
+  <div class="right" style="top:180px"><svg viewBox="0 0 700 440" aria-hidden="true" id="ccSvg" class="schem"></svg></div>
+  <div class="chips"><span class="lbl">In the parts list</span><span class="pc"><b>J1</b>USB-C, 16 contacts<i>C165948</i><em class="E">Extended</em></span><span class="pc"><b>R2, R3</b>5.1 kΩ<i>C23186</i><em class="B">Basic</em></span></div>
+  <aside class="notes">The charger has a pull-up on its side of the CC wire, and our 5.1 kΩ pulls it down; the voltage in between tells the charger a device is plugged in. One resistor shared by both CC pins looks like something else, and many chargers then never turn on 5 V. A USB-A to C cable will often work either way, which is how the mistake hides until someone uses a C-to-C cable.</aside>
+</section>
+
+<!-- 14 ESD -->
+<section class="slide" data-title="ESD protection" data-part="2 Sheets" data-steps="2">
+  <div class="content">
+    <h2>U3: a shield for the USB pins</h2>
+    <ul class="points">
+      <li data-step="1">USBLC6-2SC6 clamps static zaps on D+, D− and VBUS before they reach the F446.</li>
+      <li data-step="1">The data lines pass straight through it: D− on pins 1 and 6, D+ on pins 3 and 4.</li>
+      <li data-step="2">Put it right next to J1, so a zap meets the clamp first.</li>
+    </ul>
+  </div>
+  <div class="right" style="top:200px"><svg viewBox="0 0 700 380" aria-hidden="true" id="esdSvg" class="schem"></svg></div>
+  <div class="chips"><span class="lbl">In the parts list</span><span class="pc"><b>U3</b>USBLC6-2SC6<i>C7519</i><em class="E">Extended</em></span></div>
+  <aside class="notes">A finger touching the connector can carry thousands of volts of static. The clamps inside U3 send that to ground and VBUS instead of into PA11 and PA12. Pins 1 and 6 are the same line inside the chip, as are 3 and 4, so the trace goes in one side and out the other.</aside>
+</section>
+
+<!-- 15 Regulator -->
+<section class="slide" data-title="The 3.3 V regulator" data-part="2 Sheets">
+  <div class="content">
+    <h2>U2: 5 V to 3.3 V</h2>
+    <ul class="points">
+      <li>ME6211 is a linear regulator (LDO), good for 500 mA.</li>
+      <li>Pins: 1 VIN and 3 CE to <span class="net p">VBUS</span>, so it's always on. 2 GND, 5 VOUT to <span class="net p">+3V3</span>, 4 not connected.</li>
+      <li>C15 and C16 (10 µF ceramic) on its input and output.</li>
+      <li>The extra 1.7 V becomes heat. Add up what the board draws: the F446's current from its datasheet, the LEDs, anything on the headers.</li>
+    </ul>
+  </div>
+  <div class="right" style="top:186px"><svg viewBox="0 0 720 230" aria-hidden="true" id="ldoSvg" class="schem"></svg></div>
+  <div class="calc" id="calc">
+    <label for="iRange">Current the board draws <output id="iOut">100 mA</output></label>
+    <input type="range" id="iRange" min="10" max="500" step="10" value="100">
+    <div class="rs">
+      <div><span>Heat in U2</span><b id="pOut">0.17 W</b><i>(5.0 − 3.3) V × current</i></div>
+      <div><span>Of its 500 mA rating</span><b id="uOut">20%</b><div class="bar"><i id="uBar"></i></div></div>
+      <div><span>Efficiency</span><b>66%</b><i>3.3 V ÷ 5 V, at any current</i></div>
+    </div>
+  </div>
+  <div class="chips" style="width:700px"><span class="lbl">In the parts list</span><span class="pc"><b>U2</b>ME6211C33M5G-N<i>C82942</i><em class="E">Extended</em></span><span class="pc"><b>C15, C16</b>10 µF<i>C19702</i><em class="B">Basic</em></span></div>
+  <aside class="notes">Drag the slider to show how heat grows with current. The F446's supply current is in its datasheet, section 6.3.7, and depends on clock speed and which peripherals are on. The Nucleo uses a 500 mA LDO too, the LD39050. If a future version needs much more current, that's the point to consider a switching regulator.</aside>
+</section>
+
+<!-- 16 LED -->
+<section class="slide" data-title="LED resistors" data-part="2 Sheets" data-steps="2">
+  <div class="content">
+    <h2>D1, D2: why both LEDs are red</h2>
+    <ul class="points">
+      <li>An LED needs a resistor to set its current. On 3.3 V, the LED's forward voltage V<sub>f</sub> uses up most of the supply.</li>
+      <li data-step="1">Red drops about 2 V, leaving 1.3 V across 1 kΩ: about 1.3 mA. Clearly lit.</li>
+      <li data-step="2">The green we looked at drops 3.1 V, leaving 0.2 V: 0.2 mA. It looks dead.</li>
+      <li class="aside">So D1 (on PA5) and D2 (power) are both red, both Basic.</li>
+    </ul>
+  </div>
+  <div class="ledf">I = (3.3 V − V<sub>f</sub>) ÷ R<small>The resistor's current is the LED's current</small></div>
+  <div class="ledc red" style="top:350px" data-step="1"><div class="bulb"></div><div><h4>Red, KT-0603R</h4><p class="eq">(3.3 − 2.0) V ÷ 1 kΩ ≈ 1.3 mA</p><p><b>Bright enough</b> indoors, and far below what PA5 can drive.</p></div></div>
+  <div class="ledc green" style="top:520px" data-step="2"><div class="bulb"></div><div><h4>Green, KT-0603G</h4><p class="eq">(3.3 − 3.1) V ÷ 1 kΩ ≈ 0.2 mA</p><p><b>Barely glows.</b> It would need a much smaller resistor.</p></div></div>
+  <div class="chips"><span class="lbl">In the parts list</span><span class="pc"><b>D1, D2</b>red LED<i>C2286</i><em class="B">Basic</em></span><span class="pc"><b>R4, R5</b>1 kΩ<i>C21190</i><em class="B">Basic</em></span></div>
+  <aside class="notes">This is the same formula for every LED you'll ever add. The red figure uses a typical forward voltage; check the datasheet for the exact number. The green is the 0603 green LCSC lists at 3.1 V. A lower resistor would fix it, but then we'd have two resistor values and an Extended LED instead of one Basic part used twice.</aside>
+</section>
+
+<!-- 17 HSE -->
+<section class="slide" data-title="8 MHz crystal" data-part="2 Sheets" data-steps="3">
+  <div class="content">
+    <h2>Y1: the 8 MHz crystal</h2>
+    <ul class="points">
+      <li data-step="1">8 MHz feeds the PLL: 180 MHz for the core, and 48 MHz for USB from the second PLL.</li>
+      <li data-step="2">Its load caps: 2 × (C<sub>L</sub> − C<sub>stray</sub>). C0G, right at pins 5 and 6.</li>
+      <li data-step="3">Start-up check from ST's AN2867: will the F446's oscillator start this crystal? Yes, with room to spare.</li>
+    </ul>
+  </div>
+  <div class="right"><table class="spec"><caption>Y1 · X50328MSB2GI · C115962 · Basic</caption>
+    <tr><td>Frequency</td><td>8 MHz</td></tr><tr><td>Load capacitance C<sub>L</sub></td><td>20 pF</td></tr><tr><td>Tolerance</td><td>±10 ppm</td></tr><tr><td>ESR</td><td>80 Ω</td></tr><tr><td>Package</td><td>SMD5032</td></tr></table></div>
+  <div class="fbox" data-step="2"><span class="eq">2 × (20 − 6.5) pF ≈ 27 pF each</span>C<sub>stray</sub> is the pins plus the board, about 6.5 pF. The Basic 22 pF part also works; the clock runs a few tens of ppm fast.</div>
+  <div class="gauge" data-step="3">
+    <div class="lbl"><span>g<sub>m,crit</sub>, mA/V</span><span>Y1 needs 0.43–0.59 · F446 limit 1.0</span></div>
+    <div class="trk"><div class="band"></div><div class="lim"></div></div>
+    <div class="ticks"><span style="left:0%">0</span><span style="left:41.67%">0.5</span><span style="left:83.33%">1.0</span><span style="left:100%">1.2</span></div>
+  </div>
+  <div class="chips" style="width:700px"><span class="lbl">In the parts list</span><span class="pc"><b>Y1</b>8 MHz<i>C115962</i><em class="B">Basic</em></span><span class="pc"><b>C11, C12</b>27 pF C0G<i>C1656</i><em class="E">Extended</em></span></div>
+  <aside class="notes">The start-up figure is g-m-crit equals 4 times ESR times 2-pi-F squared times C0 plus CL squared. With this crystal it comes to 0.43 to 0.59 milliamps per volt, depending on its shunt capacitance C0, which we assumed is 3 to 7 pF. The F446 datasheet allows up to 1. The full calculator is in the parts talk, mcu-parts.html.</aside>
+</section>
+
+<!-- 18 LSE -->
+<section class="slide" data-title="32.768 kHz crystal" data-part="2 Sheets" data-steps="1">
+  <div class="content">
+    <h2>Y2: the 32.768 kHz crystal</h2>
+    <ul class="points">
+      <li>Only for the real-time clock: keeping time and date, even while the chip sleeps.</li>
+      <li data-step="1">32 768 is 2<sup>15</sup>. Halve it 15 times and you get one tick per second.</li>
+      <li>Pick a 6 pF crystal. Common 12.5 pF watch crystals can be too hard for this chip's low-power driver to start.</li>
+      <li class="aside">Ours is the Nucleo's own crystal and caps. Fit it later if you need it: mark Y2, C13, C14 as DNP (do not place).</li>
+    </ul>
+  </div>
+  <div class="chain" id="chain"></div>
+  <div class="chain-cap" data-step="1"><b>Set LSE drive to high in firmware</b> for extra start-up margin. It costs a few microamps.</div>
+  <div class="chips"><span class="lbl">In the parts list</span><span class="pc"><b>Y2</b>32.768 kHz<i>C1985642</i><em class="K">Check</em></span><span class="pc"><b>C13, C14</b>4.3 pF C0G<i>C59526</i><em class="K">Check</em></span></div>
+  <aside class="notes">The Nucleo-F446RE uses this exact crystal, the Abracon ABS25 at 6 pF, with 4.3 pF caps, so we know it starts on this chip. If the project never needs the clock or calendar, leave these three parts off; PC14 and PC15 then become ordinary pins.</aside>
+</section>
+
+<!-- 19 Nucleo wiring -->
+<section class="slide" data-title="Program with the Nucleo" data-part="2 Sheets" data-steps="3">
+  <div class="content" style="width:600px">
+    <h2>J2: program it with the Nucleo</h2>
+    <ul class="points">
+      <li data-step="1">Take both CN2 jumpers off. The ST-LINK lets go of the Nucleo's own chip.</li>
+      <li data-step="2">Six wires, CN4 to J2, pin 1 to pin 1 through pin 6 to pin 6. Same order, so they run straight.</li>
+      <li data-step="3">Power our board from its own USB-C. CN4 pin 1 only senses our 3.3 V.</li>
+      <li class="aside">Put the jumpers back to program the Nucleo again.</li>
+    </ul>
+  </div>
+  <div class="nw"><svg viewBox="0 0 770 600" aria-hidden="true" id="nwSvg"></svg></div>
+  <div class="chips" style="width:600px"><span class="lbl">In the parts list</span><span class="pc"><b>J2</b>1 × 6 header<i>C37208</i><em class="E">Extended</em></span></div>
+  <aside class="notes">This is why J2's pin order copies CN4: the six jumper wires go straight across with no crossing, so there's nothing to get wrong. The drawing is simplified. If the programmer can't connect, try "Connect under reset" in CubeProgrammer, which is why NRST is on pin 5.</aside>
+</section>
+
+<!-- 20 Signs of life -->
+<section class="slide" data-title="Sheet_4" data-part="2 Sheets">
+  <div class="content wide"><h2>Sheet_4: the same pins as the Nucleo</h2></div>
+  <table class="tb">
+    <thead><tr><th>Function</th><th>Pin and net</th><th>Our parts</th><th>On the Nucleo</th><th>In firmware</th></tr></thead>
+    <tbody>
+      <tr><td>User LED</td><td>PA5, pin 21 · <span class="net s">LED</span></td><td><span class="pc"><b>R4</b>1 kΩ<i>C21190</i></span><span class="pc"><b>D1</b>red<i>C2286</i></span></td><td>LD2</td><td>HAL_GPIO_TogglePin</td></tr>
+      <tr><td>Button</td><td>PC13, pin 2 · <span class="net s">BUTTON</span></td><td><span class="pc"><b>SW2</b>tactile<i>C318884</i></span></td><td>B1, pressed reads 0</td><td>HAL_GPIO_ReadPin, pull-up on</td></tr>
+      <tr><td>Serial</td><td>PA2, PA3 · <span class="net s">UART_TX</span> <span class="net s">UART_RX</span></td><td><span class="pc"><b>J3</b>1 × 3 header<i>C49257</i></span></td><td>USART2 to the ST-LINK's USB COM port</td><td>HAL_UART_Transmit, 115200 baud</td></tr>
+    </tbody>
+  </table>
+  <p class="lead" style="position:absolute;left:96px;top:440px;width:1000px;font-size:24px">Firmware written on the Nucleo this week runs on our board. The only setting that changes is the 8 MHz clock source (slide 24).</p>
+  <aside class="notes">On our board the serial port goes to J3, so you need a 3.3 V USB-serial adapter: board TX to the adapter's RX, and RX to TX. On the Nucleo the same pins go through the ST-LINK, so the messages show up on the Nucleo's own USB cable.</aside>
+</section>
+
+<!-- 21 Order -->
+<section class="slide" data-title="The whole order" data-part="3 Check">
+  <div class="content wide"><h2>20 different parts, 34 pieces per board</h2></div>
+  <div class="waf" id="waf"></div>
+  <div class="wnote"><b>Extended parts</b> add a one-time loading fee per part type if JLCPCB assembles the board. Swap where it's free: the Basic 22 pF C1653 can replace the 27 pF. J2 and J3 are through-hole, so we solder those by hand.</div>
+  <aside class="notes">Ten of the twenty are Basic. The chip, the USB parts and the regulator are Extended, and that's normal for parts like these. The three marked Check: confirm their class in the EasyEDA search result when you place them. If you solder the board yourself, none of this affects you.</aside>
+</section>
+
+<!-- 22 Verify -->
+<section class="slide" data-title="Verify a sheet" data-part="3 Check" data-steps="5">
+  <div class="content wide"><h2>How we verify each sheet</h2></div>
+  <ol class="ck">
+    <li><i>1</i><div><b>Every U1 pin matches the build sheet</b><span>Tick each row of the printed build sheet as you check the pin.</span></div></li>
+    <li><i>2</i><div><b>Every part's C-number matches the parts list</b><span>Click a part: its LCSC number is the Supplier Part in the right-hand panel.</span></div></li>
+    <li><i>3</i><div><b>The Design manager shows no net errors</b><span><kbd>Ctrl</kbd><span class="plus">+</span><kbd>D</kbd>, then refresh after each fix.</span></div></li>
+    <li><i>4</i><div><b>Every part has a footprint</b><span><kbd>Alt</kbd><span class="plus">+</span><kbd>F</kbd> opens the Footprint manager.</span></div></li>
+    <li><i>5</i><div><b>A partner checks it with fresh eyes</b><span>Swap printed sheets. The person who drew it is the worst at spotting its mistakes.</span></div></li>
+  </ol>
+  <div class="done"><h3>Done for Thursday</h3><ul><li>All four sheets pass checks 1 to 5</li><li>Printed, with the build sheet ticked</li><li>The Nucleo blinks, reads the button and prints "hello"</li></ul></div>
+  <aside class="notes">Click through the five checks. The first two are done on paper with the printed build sheet and parts list; the next two are in EasyEDA; the last is a person. Partner review catches the mistakes on the next slide far more often than the software does.</aside>
+</section>
+
+<!-- 23 Mistakes -->
+<section class="slide" data-title="Mistakes to look for" data-part="3 Check">
+  <div class="content wide"><h2>Mistakes to look for</h2></div>
+  <div class="faq">
+    <div><b>VCAP wired to 3.3 V</b><span>C9 goes to GND and nothing else, or the chip won't run.</span></div>
+    <div><b>One resistor for both CC pins</b><span>R2 and R3, one each, or USB-C chargers stay off.</span></div>
+    <div><b>BOOT0 left floating</b><span>R1 to GND, or the board may start ST's bootloader instead of your code.</span></div>
+    <div><b>X7R on the crystal</b><span>C11 to C14 must be C0G.</span></div>
+    <div><b>A green LED on 3.3 V with 1 kΩ</b><span>0.2 mA looks like a dead board. Use the red one.</span></div>
+    <div><b>Only one D+ pin joined</b><span>Join both D+ and both D−, or USB works only one way up.</span></div>
+    <div><b>J2 in a different order</b><span>Match the Nucleo's CN4, so the wires run straight.</span></div>
+    <div><b>+3V3 here, 3V3 there</b><span>Two names make two nets. Copy and paste the label.</span></div>
+  </div>
+  <aside class="notes">Use this as the checklist for partner review. Every one of these passes the Design manager's checks, because the software can't know what you meant. Only a person reading the sheet against the parts list catches them.</aside>
+</section>
+
+<!-- 24 Nucleo firmware -->
+<section class="slide" data-title="Test on the Nucleo" data-part="4 Next" data-steps="2">
+  <div class="content">
+    <h2>Test on the Nucleo now</h2>
+    <ul class="points">
+      <li>New STM32 project, board NUCLEO-F446RE.</li>
+      <li>Blink PA5, read the button on PC13, print "hello" on USART2 at 115200.</li>
+      <li data-step="1">The Nucleo has no 8 MHz crystal. Its ST-LINK feeds 8 MHz into PH0, so HSE is set to bypass.</li>
+      <li data-step="2">Our board has Y1. Change one setting and the same code runs on it.</li>
+    </ul>
+  </div>
+  <div class="rcc" style="top:200px" data-step="1"><div class="hd">RCC · Nucleo-F446RE <span>CubeMX, Pinout & Configuration</span></div>
+    <div class="rw"><span>High Speed Clock (HSE)</span><span class="dd">BYPASS Clock Source <span>▾</span></span></div>
+    <div class="note">X3 isn't fitted. The clock comes from the ST-LINK's MCO output.</div></div>
+  <div class="rcc" style="top:430px" data-step="2"><div class="hd">RCC · Our F446 board <span>Same project, one change</span></div>
+    <div class="rw"><span>High Speed Clock (HSE)</span><span class="dd hot">Crystal/Ceramic Resonator <span>▾</span></span></div>
+    <div class="note">Forget this and our crystal never starts, so the 180 MHz clock and USB don't either.</div></div>
+  <aside class="notes">This is the one thing that differs between the two boards in firmware. Everything else, the LED, the button and the serial port, uses the same pins on both. Save the Nucleo project; it becomes the bring-up test for our board when it arrives.</aside>
+</section>
+
+<!-- 25 Next -->
+<section class="slide" data-title="What's next" data-part="4 Next">
+  <div class="content wide"><h2>From here to the final</h2></div>
+  <svg class="road-trace" viewBox="0 0 1600 900" aria-hidden="true"><path pathLength="1" d="M160 369 H1440"/></svg>
+  <div class="stop" style="left:250px;animation-delay:.2s"><div class="pad" style="border-color:var(--net);color:var(--net)">1</div><h3>Thursday, Nov 5</h3><p>Checkpoint: four sheets checked and printed, and the Nucleo demo.</p></div>
+  <div class="stop" style="left:617px;animation-delay:.7s"><div class="pad">2</div><h3>Week of Nov 9</h3><p>Convert to PCB, place, route, DRC, 3D check. Order early in the week.</p></div>
+  <div class="stop" style="left:983px;animation-delay:1.2s"><div class="pad">3</div><h3>Boards arrive</h3><p>Bring-up: 3.3 V on every VDD pin first, then SWD connects, then blink.</p></div>
+  <div class="stop" style="left:1350px;animation-delay:1.7s"><div class="pad" style="border-color:var(--ok);color:var(--ok)">4</div><h3>Final project</h3><p>Present the working board, or the design and the Nucleo demo if boards are late.</p></div>
+  <p class="hint" style="position:absolute;left:96px;top:640px;margin:0;max-width:960px">Making and shipping boards can take one to two weeks, so the order is the deadline that matters most.</p>
+  <aside class="notes">Bring-up order matters: power first with nothing else connected, measuring 3.3 V at each VDD pin and checking nothing gets hot. Only then connect the ST-LINK. If SWD connects, the chip, its power, VCAP and NRST are all right, and blinking the LED proves the clock and the firmware.</aside>
+</section>
+
+<!-- 26 Resources -->
+<section class="slide" data-title="Questions and resources" data-part="4 Next">
+  <div class="content wide">
+    <h2>Questions, and where to look</h2>
+    <ul class="res">
+      <li><a href="F446-Parts-List.pdf" download>F446 parts list (PDF)</a>Every part on these slides, with its LCSC number and the Nucleo plan.</li>
+      <li><a href="F446-Build-Sheet.pdf" download>F446 build sheet (PDF)</a>Every core pin and what it connects to, plus the shortcuts.</li>
+      <li><a href="f446-build.html">Part 1: from the basics to the F446 core</a>EasyEDA basics and the seven core blocks.</li>
+      <li><a href="mcu-parts.html">Picking parts for a custom STM32 board</a>The crystal calculator is on slide 17.</li>
+      <li><a href="https://www.st.com/en/microcontrollers-microprocessors/stm32f446re.html" target="_blank" rel="noopener">STM32F446RE product page</a>Datasheet and reference manual.</li>
+      <li><a href="https://www.st.com/resource/en/application_note/an4488-getting-started-with-stm32f4xxxx-mcu-hardware-development-stmicroelectronics.pdf" target="_blank" rel="noopener">ST AN4488: STM32F4 hardware guide</a>Power, reset, boot and VCAP values.</li>
+      <li><a href="https://www.st.com/en/evaluation-tools/nucleo-f446re.html" target="_blank" rel="noopener">NUCLEO-F446RE</a>Its user manual (UM1724) and schematic.</li>
+      <li><a href="https://jlcpcb.com/parts" target="_blank" rel="noopener">JLCPCB parts library</a>Stock, price and Basic or Extended for any C-number.</li>
+    </ul>
+  </div>
+  <aside class="notes">Leave this up for questions. Everything on these slides is in the printed parts list, so people can check values there while they work.</aside>
+</section>
+
+</div></div>
+
+<div id="notes"><h5></h5><div class="body"></div></div>
+<div id="help"><kbd>→</kbd> <kbd>Space</kbd> next &nbsp; <kbd>←</kbd> back &nbsp; <kbd>N</kbd> notes &nbsp; <kbd>F</kbd> full screen &nbsp; <kbd>Home</kbd> <kbd>End</kbd> first and last</div>
+<nav id="navbtns" aria-label="Slide navigation"><button id="prev" aria-label="Previous">‹</button><button id="next" aria-label="Next">›</button><button id="helpbtn" aria-label="Keyboard help">?</button></nav>
+
+<script>
+(function(){
+"use strict";
+const deck=document.getElementById('deck');
+const slides=[...deck.querySelectorAll('.slide')];
+const REDUCE=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function fit(){const s=Math.min(innerWidth/1600,innerHeight/900);deck.style.transform='scale('+s+')';}
+addEventListener('resize',fit);fit();
+
+/* frame + title block */
+function frameSVG(){
+  let t='';
+  for(let i=0;i<8;i++){const x=44+189*(i+.5);t+=`<text x="${x}" y="34">${i+1}</text><text x="${x}" y="866">${i+1}</text>`;
+    if(i){const xl=44+189*i;t+=`<line x1="${xl}" y1="24" x2="${xl}" y2="44"/><line x1="${xl}" y1="856" x2="${xl}" y2="876"/>`;}}
+  const L='ABCD';
+  for(let j=0;j<4;j++){const y=44+203*(j+.5);t+=`<text x="34" y="${y}">${L[j]}</text><text x="1566" y="${y}">${L[j]}</text>`;
+    if(j){const yl=44+203*j;t+=`<line x1="24" y1="${yl}" x2="44" y2="${yl}"/><line x1="1556" y1="${yl}" x2="1576" y2="${yl}"/>`;}}
+  return `<svg class="frame" viewBox="0 0 1600 900" aria-hidden="true"><rect class="outer" x="24" y="24" width="1552" height="852"/><rect x="44" y="44" width="1512" height="812"/>${t}</svg>`;
+}
+slides.forEach((s,i)=>{
+  s.insertAdjacentHTML('afterbegin',frameSVG());
+  s.insertAdjacentHTML('beforeend',`<div class="tblock" aria-hidden="true"><div class="tb-course">STM32F446 board: the components<span>Rev A</span></div><div class="tb-title"><span>Title</span><b>${s.dataset.title}</b></div><div><span>Part</span><b>${s.dataset.part}</b></div><div><span>Sheet</span><b>${i+1} of ${slides.length}</b></div></div>`);
+});
+
+/* ================= U1 symbol (matches the EasyEDA LCSC symbol) ================= */
+const U1L=[[1,'VBAT'],[2,'PC13'],[3,'PC14-OSC32_IN'],[4,'PC15-OSC32_OUT'],[5,'PH0-OSC_IN'],[6,'PH1-OSC_OUT'],[7,'NRST'],[8,'PC0'],[9,'PC1'],[10,'PC2'],[11,'PC3'],[12,'VSSA/VREF-'],[13,'VDDA/VREF+'],[14,'PA0'],[15,'PA1'],[16,'PA2'],[17,'PA3'],[18,'VSS'],[19,'VDD'],[20,'PA4'],[21,'PA5'],[22,'PA6'],[23,'PA7'],[24,'PC4'],[25,'PC5'],[26,'PB0'],[27,'PB1'],[28,'PB2'],[29,'PB10'],[30,'VCAP_1'],[31,'VSS'],[32,'VDD']];
+const U1R=[[64,'VDD'],[63,'VSS'],[62,'PB9'],[61,'PB8'],[60,'BOOT0'],[59,'PB7'],[58,'PB6'],[57,'PB5'],[56,'PB4'],[55,'PB3'],[54,'PD2'],[53,'PC12'],[52,'PC11'],[51,'PC10'],[50,'PA15'],[49,'PA14'],[48,'VDD'],[47,'VSS'],[46,'PA13'],[45,'PA12'],[44,'PA11'],[43,'PA10'],[42,'PA9'],[41,'PA8'],[40,'PC9'],[39,'PC8'],[38,'PC7'],[37,'PC6'],[36,'PB15'],[35,'PB14'],[34,'PB13'],[33,'PB12']];
+const KIND={p:['#C62828','#FBE3E1','#9B1C1C'],g:['#17212B','#E3E7EA','#17212B'],c:['#8B3FB5','#EEE2F5','#5B2180'],k:['#B26B00','#FCEBD0','#8A5300'],d:['#0F7F73','#D8F0EC','#0B5E55'],s:['#1D5DBF','#DCE6F4','#123D7E'],f:['#2F9E5C','#DDF1E5','#1E6E3F'],done:['#9AA6B1','#ECEFF2','#5F6B77']};
+const nameCls=n=>/^VDD/.test(n)?'pwr':/^VSS/.test(n)?'gnd':'io';
+function pillW(t){return Math.round(t.length*7.4+14);}
+function u1SVG(o){
+  const {x,y,w,p}=o,h=p*33,st=20,ld=26,tags=o.tags||{};
+  let base='',over='';
+  const rows=[...U1L.map((r,i)=>[r[0],r[1],'L',i]),...U1R.map((r,i)=>[r[0],r[1],'R',i])];
+  rows.forEach(([num,name,side,i],k)=>{
+    const py=y+p*(i+1),L=side==='L';
+    const x0=L?x-st:x+w, x1=L?x:x+w+st;
+    const dly=o.anim?`style="animation-delay:${(0.2+(L?i:i+0.5)*0.03).toFixed(2)}s"`:'';
+    base+=`<g class="pinrow" ${dly}><line class="stub" x1="${x0}" y1="${py}" x2="${x1}" y2="${py}"/>`+
+      `<text class="pnum" x="${L?x-3:x+w+3}" y="${py-3}" text-anchor="${L?'end':'start'}">${num}</text>`+
+      `<text class="pname ${nameCls(name)}" x="${L?x+5:x+w-5}" y="${py+4.5}" text-anchor="${L?'start':'end'}">${name}</text></g>`;
+    const t=tags[num];if(!t)return;
+    const [label,kind,step]=t;const K=KIND[kind];
+    let g=`<g class="tg t${step||0}">`;
+    g+=`<rect x="${x+1}" y="${py-p/2+1}" width="${w-2}" height="${p-2}" fill="${K[1]}" opacity=".85"/>`;
+    g+=`<text class="pname" x="${L?x+5:x+w-5}" y="${py+4.5}" text-anchor="${L?'start':'end'}" fill="${K[2]}">${name}</text>`;
+    g+=`<line class="lead" x1="${x0}" y1="${py}" x2="${x1}" y2="${py}" stroke="${K[0]}"/>`;
+    if(label){
+      const pw=pillW(label),lx=L?x-st-ld:x+w+st+ld;
+      g+=`<line class="lead" x1="${L?x-st:x+w+st}" y1="${py}" x2="${lx}" y2="${py}" stroke="${K[0]}"/>`;
+      const rx=L?lx-pw:lx;
+      g+=`<rect x="${rx}" y="${py-8.5}" width="${pw}" height="17" rx="3" fill="${K[1]}" stroke="${K[0]}" stroke-width="1.4"/><text x="${rx+pw/2}" y="${py+4.5}" text-anchor="middle" fill="${K[2]}">${label}</text>`;
+    }
+    over+=g+'</g>';
+  });
+  return `<g class="u1${o.anim?' u1-title':''}"><text class="u1-des" x="${x+w/2}" y="${y-24}">U1</text><text class="u1-pn" x="${x+w/2}" y="${y-7}">STM32F446RET6</text>`+
+    `<rect class="u1-body" x="${x}" y="${y}" width="${w}" height="${h}"/><circle class="dot1" cx="${x+7}" cy="${y+7}" r="3"/>${over}${base}</g>`;
+}
+/* build steps: pin -> [net label, kind, sub-step] */
+const BUILD={
+  1:{1:['+3V3','p',1],19:['+3V3','p',1],32:['+3V3','p',1],48:['+3V3','p',1],64:['+3V3','p',1],18:['GND','g',2],31:['GND','g',2],47:['GND','g',2],63:['GND','g',2]},
+  2:{13:['VDDA','p',1],12:['GND','g',1],30:['VCAP','c',2]},
+  3:{7:['NRST','c',1],60:['BOOT0','c',2]},
+  4:{5:['OSC_IN','k',1],6:['OSC_OUT','k',1],3:['OSC32_IN','k',2],4:['OSC32_OUT','k',2]},
+  5:{46:['SWDIO','d',1],49:['SWCLK','d',1],55:['SWO','d',2]},
+  6:{44:['USB_DM','d',2],45:['USB_DP','d',2]},
+  7:{21:['LED','s',1],2:['BUTTON','s',2],16:['UART_TX','s',3],17:['UART_RX','s',3]}
+};
+const GEO={x:1100,y:118,w:186,p:19};
+document.querySelectorAll('.u1host').forEach(h=>{
+  let tags={},geo=GEO,anim=false;
+  if(h.dataset.build){const n=+h.dataset.build;
+    for(let k=1;k<n;k++)for(const pin in BUILD[k])tags[pin]=[BUILD[k][pin][0],'done',0];
+    for(const pin in BUILD[n])tags[pin]=BUILD[n][pin];}
+  else if(h.dataset.u1==='meet'){
+    const grp=[[1,'p',[1,12,13,18,19,31,32,47,48,63,64]],[2,'c',[7,30,60]],[3,'k',[3,4,5,6]],[4,'d',[44,45,46,49]]];
+    const used=new Set();grp.forEach(([st,k,pins])=>pins.forEach(pn=>{tags[pn]=['',k,st];used.add(pn);}));
+    for(let pn=1;pn<=64;pn++)if(!used.has(pn))tags[pn]=['','f',5];
+    [12,18,31,47,63].forEach(pn=>tags[pn]=['','g',1]);
+  }
+  else if(h.dataset.u1==='title'){geo={x:1180,y:150,w:186,p:18};anim=true;
+    tags={1:['+3V3','p',0],19:['+3V3','p',0],32:['+3V3','p',0],48:['+3V3','p',0],64:['+3V3','p',0],18:['GND','g',0],31:['GND','g',0],47:['GND','g',0],63:['GND','g',0],5:['OSC_IN','k',0],6:['OSC_OUT','k',0],46:['SWDIO','d',0],49:['SWCLK','d',0]};}
+  h.innerHTML=`<svg viewBox="0 0 1600 900" aria-hidden="true">${u1SVG(Object.assign({},geo,{tags,anim}))}</svg>`;
+});
+
+/* ================= schematic drawing helpers ================= */
+const KC=k=>KIND[k];
+const pill=(x,y,t,k,anchor)=>{const pw=pillW(t),K=KC(k),rx=anchor==='r'?x-pw:anchor==='c'?x-pw/2:x;return {w:pw,s:`<g class="pl"><rect x="${rx}" y="${y-9}" width="${pw}" height="18" rx="3" fill="${K[1]}" stroke="${K[0]}" stroke-width="1.4"/><text x="${rx+pw/2}" y="${y+4.5}" text-anchor="middle" fill="${K[2]}" style="fill:${K[2]}">${t}</text></g>`,l:rx,r:rx+pw};};
+const W=d=>`<path class="w" d="${d}"/>`;
+const gnd=(x,y)=>`<g class="k"><path d="M${x-12} ${y} H${x+12} M${x-8} ${y+5} H${x+8} M${x-4} ${y+10} H${x+4}"/></g>`;
+const capV=(x,y1,y2,n,v)=>{const m=(y1+y2)/2;return `<g class="k"><path d="M${x} ${y1} V${m-4} M${x-13} ${m-4} H${x+13} M${x-13} ${m+4} H${x+13} M${x} ${m+4} V${y2}"/></g><text x="${x+17}" y="${m-3}">${n}</text><text class="v" x="${x+17}" y="${m+14}">${v}</text>`;};
+const resV=(x,y1,y2,n,v)=>{const m=(y1+y2)/2;return `<g class="k"><path d="M${x} ${y1} V${m-17} M${x} ${m+17} V${y2}"/><rect class="fill" x="${x-7}" y="${m-17}" width="14" height="34"/></g><text x="${x+14}" y="${m-3}">${n}</text><text class="v" x="${x+14}" y="${m+14}">${v}</text>`;};
+const resH=(x1,x2,y,n,v)=>{const m=(x1+x2)/2;return `<g class="k"><path d="M${x1} ${y} H${m-17} M${m+17} ${y} H${x2}"/><rect class="fill" x="${m-17}" y="${y-7}" width="34" height="14"/></g><text x="${m}" y="${y-14}" text-anchor="middle">${n}</text><text class="v" x="${m}" y="${y+26}" text-anchor="middle">${v}</text>`;};
+const xtalH=(x1,x2,y,n,v)=>{const m=(x1+x2)/2;return `<g class="k"><path d="M${x1} ${y} H${m-13} M${m-13} ${y-12} V${y+12} M${m+13} ${y-12} V${y+12} M${m+13} ${y} H${x2}"/><rect class="fill" x="${m-8}" y="${y-9}" width="16" height="18"/></g><text x="${m}" y="${y-20}" text-anchor="middle">${n} <tspan class="v" style="fill:#123D7E">${v}</tspan></text>`;};
+const fbH=(x1,x2,y,n)=>{const m=(x1+x2)/2;return `<g class="k"><path d="M${x1} ${y} H${m-15} M${m+15} ${y} H${x2}"/><rect class="solid" x="${m-15}" y="${y-6}" width="30" height="12" rx="2"/></g><text x="${m}" y="${y-14}" text-anchor="middle">${n}</text>`;};
+const ledV=(x,y1,y2,n)=>{const m=(y1+y2)/2;return `<g class="k"><path d="M${x} ${y1} V${m-9} M${x-11} ${m+9} H${x+11} M${x} ${m+9} V${y2} M${x+14} ${m-6} l9 -7 M${x+16} ${m+4} l9 -7"/><path class="fill" d="M${x-11} ${m-9} H${x+11} L${x} ${m+9} Z"/></g><text x="${x+30}" y="${m+5}">${n}</text>`;};
+const btnV=(x,y1,y2,n)=>{const m=(y1+y2)/2;return `<g class="k"><path d="M${x} ${y1} V${m-12} M${x} ${m+12} V${y2} M${x-12} ${m-16} V${m+16} M${x-12} ${m} H${x-22}"/><circle class="fill" cx="${x}" cy="${m-12}" r="3"/><circle class="fill" cx="${x}" cy="${m+12}" r="3"/></g><text x="${x+12}" y="${m+5}">${n}</text>`;};
+const box=(x,y,w,h,title)=>`<g class="k"><rect class="fill" x="${x}" y="${y}" width="${w}" height="${h}" rx="3"/></g><text class="box" x="${x+w/2}" y="${y-8}" text-anchor="middle">${title}</text>`;
+const T=(x,y,s,cls,anchor)=>`<text ${cls?`class="${cls}"`:''} x="${x}" y="${y}" ${anchor?`text-anchor="${anchor}"`:''}>${s}</text>`;
+const G=(n,s)=>`<g class="gs g${n}">${s}</g>`;
+const set=(id,s)=>{const e=document.getElementById(id);if(e)e.innerHTML=s;};
+
+
+/* ================= part 2 drawings ================= */
+const BODY='#2A2F35',PINC='#B9C2CA',GOLD='#D8B54A';
+const R=(x,y,w,h,f,ex)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${f}" ${ex||''}/>`;
+
+/* title tray */
+(function(){
+  const lqfp=(cx,cy)=>{let s=R(cx-44,cy-44,88,88,BODY,'rx="3"')+`<circle cx="${cx-31}" cy="${cy-31}" r="4" fill="#59626B"/><text x="${cx}" y="${cy+5}" text-anchor="middle" style="font:600 14px var(--f-key);fill:#8C969F">F446</text>`;
+    for(let i=0;i<12;i++){const t=-36.3+i*6.6;s+=R(cx-56,cy+t-1.7,12,3.4,PINC)+R(cx+44,cy+t-1.7,12,3.4,PINC)+R(cx+t-1.7,cy-56,3.4,12,PINC)+R(cx+t-1.7,cy+44,3.4,12,PINC);}return s;};
+  const chip=(cx,cy,body,end)=>R(cx-48,cy-24,96,48,end,'rx="4"')+R(cx-28,cy-24,56,48,body);
+  const cap=(cx,cy)=>chip(cx-26,cy-14,'#C9A27A','#D5DADF')+`<g transform="translate(${cx+34} ${cy+20}) scale(.7)">${chip(0,0,'#C9A27A','#D5DADF')}</g>`;
+  const res=(cx,cy)=>chip(cx,cy,'#202428','#D5DADF')+`<text x="${cx}" y="${cy+6}" text-anchor="middle" style="font:600 16px var(--f-key);fill:#E4EAEF">1002</text>`;
+  const xtal=(cx,cy)=>R(cx-52,cy-35,104,70,'#E4E8EB','rx="6" stroke="#9AA6B1" stroke-width="2"')+R(cx-44,cy-27,88,54,'#D3D9DE','rx="4"')+`<text x="${cx}" y="${cy+6}" text-anchor="middle" style="font:600 16px var(--f-key);fill:#6B7680">8.000</text>`;
+  const sot=(cx,cy,n)=>{let s='';[-22,0,22].forEach(o=>s+=R(cx+o-4.5,cy+18,9,14,PINC));(n===5?[-22,22]:[-22,0,22]).forEach(o=>s+=R(cx+o-4.5,cy-32,9,14,PINC));
+    return s+R(cx-32,cy-18,64,36,BODY,'rx="3"')+`<circle cx="${cx-23}" cy="${cy+9}" r="2.5" fill="#59626B"/>`;};
+  const usbc=(cx,cy)=>{let s=R(cx-62,cy-22,124,44,'#D9DEE2','rx="22" stroke="#8F9BA6" stroke-width="2"')+R(cx-54,cy-15,108,30,BODY,'rx="15"')+R(cx-38,cy-5,76,10,'#3E474F','rx="3"');
+    for(let i=0;i<8;i++)s+=R(cx-33+i*8.7,cy-3,4,6,GOLD);return s;};
+  const tact=(cx,cy)=>R(cx-56,cy-38,14,8,PINC)+R(cx+42,cy-38,14,8,PINC)+R(cx-56,cy+30,14,8,PINC)+R(cx+42,cy+30,14,8,PINC)+R(cx-44,cy-44,88,88,BODY,'rx="5"')+`<circle cx="${cx}" cy="${cy}" r="30" fill="#3A4148"/><circle cx="${cx}" cy="${cy}" r="21" fill="${GOLD}"/>`;
+  const hdr=(cx,cy)=>{let s='';const n=6;s+=R(cx-n*13,cy-26,n*26,26,BODY,'rx="2"');for(let i=0;i<n;i++)s+=R(cx-n*13+8+i*26,cy-18,10,10,GOLD);
+    s+=R(cx-3*13,cy+10,3*26,26,BODY,'rx="2"');for(let i=0;i<3;i++)s+=R(cx-3*13+8+i*26,cy+18,10,10,GOLD);return s;};
+  const cells=[[lqfp,'U1','STM32F446RET6'],[cap,'C1–C16','0603 ceramic caps'],[res,'R1–R5','0603 resistors'],[xtal,'Y1','8 MHz crystal'],[(x,y)=>sot(x,y,5),'U2','3.3 V regulator'],
+    [(x,y)=>sot(x,y,6),'U3','USB ESD clamp'],[usbc,'J1','USB-C'],[tact,'SW1, SW2','buttons'],[hdr,'J2, J3','pin headers']];
+  let s='';
+  cells.forEach((c,i)=>{const x=(i%3)*221,y=Math.floor(i/3)*217,cx=x+103,cy=y+80;
+    const art=c[0](cx,cy);
+    s+=`<g class="cell" style="animation-delay:${(0.25+i*0.12).toFixed(2)}s"><rect class="bin" x="${x}" y="${y}" width="206" height="196" rx="10"/>${art}<text class="ref" x="${cx}" y="${y+156}">${c[1]}</text><text class="what" x="${cx}" y="${y+178}">${c[2]}</text></g>`;});
+  set('traySvg',s);
+})();
+
+/* sheet map */
+(function(){
+  const page=(x,y,w,h,title,lines,tx,anchor)=>{let s=`<rect class="pg" x="${x}" y="${y}" width="${w}" height="${h}" rx="4"/><text class="pgt" x="${x+18}" y="${y+36}">${title}</text>`;
+    lines.forEach((l,i)=>{s+=`<text class="n" x="${tx}" y="${y+80+i*30}" ${anchor?`text-anchor="${anchor}"`:''}>${l}</text>`;});return s;};
+  let s=page(0,20,400,310,'Sheet_2 · Power and USB',['J1 USB-C, R2, R3','U3 ESD protection','U2 regulator, C15, C16','R5, D2 power LED'],18);
+  s+=page(505,20,400,310,'Sheet_1 · MCU core',['U1 STM32F446RET6','C1–C10 capacitors','FB1 ferrite bead','R1, SW1'],705,'middle');
+  s+=page(1010,20,400,310,'Sheet_3 · Clocks and debug',['Y1 8 MHz, C11, C12','Y2 32.768 kHz, C13, C14','J2 SWD header'],1112);
+  s+=`<rect class="pg" x="505" y="420" width="400" height="130" rx="4"/><text class="pgt" x="523" y="500">Sheet_4 · Signs of life</text><text class="n" x="523" y="530">R4, D1 · SW2 · J3</text>`;
+  const L=[['+3V3','p'],['GND','g'],['USB_DM','d'],['USB_DP','d']],Rr=[['OSC_IN','k'],['OSC_OUT','k'],['SWDIO','d'],['SWCLK','d'],['NRST','c']],B=[['LED','s',560],['BUTTON','s',638],['UART_TX','s',730],['UART_RX','s',835]];
+  let links='';
+  L.forEach((l,i)=>{const y=130+i*46;const a=pill(392,y,l[0],l[1],'r'),b=pill(513,y,l[0],l[1],'l');s+=a.s+b.s;links+=`<path class="lnk" d="M${a.r+3} ${y} H${b.l-3}"/>`;});
+  Rr.forEach((l,i)=>{const y=110+i*44;const a=pill(897,y,l[0],l[1],'r'),b=pill(1018,y,l[0],l[1],'l');s+=a.s+b.s;links+=`<path class="lnk" d="M${a.r+3} ${y} H${b.l-3}"/>`;});
+  B.forEach(l=>{const a=pill(l[2],308,l[0],l[1],'c'),b=pill(l[2],442,l[0],l[1],'c');s+=a.s+b.s;links+=`<path class="lnk" d="M${l[2]} 319 V431"/>`;});
+  s+=`<text class="n" x="1010" y="380">+3V3 and GND flags go on every sheet.</text><text class="n" x="0" y="380">Sheet tabs sit along the bottom of the editor.</text>`;
+  set('mapSvg',s+links);
+})();
+
+/* decoupling loops */
+(function(){
+  const half=(x0,near)=>{let s=`<text x="${x0+20}" y="52" style="font:600 22px var(--f-cond);fill:#E4EAEF">${near?'Near: a small loop':'Far: a big loop'}</text>`;
+    s+=`<rect x="${x0+20}" y="80" width="100" height="300" fill="#1A252E" stroke="#F2C94C" stroke-width="2"/>`;
+    for(let k=0;k<12;k++){const y=95+25*k;s+=R(x0+120,y-6,26,12,(k===4||k===5)?'#E5483B':'#6B3A36');}
+    s+=`<text x="${x0+112}" y="200" text-anchor="end" style="font:600 13px var(--f-key);fill:#E4EAEF">VDD</text><text x="${x0+112}" y="225" text-anchor="end" style="font:600 13px var(--f-key);fill:#E4EAEF">VSS</text>`;
+    if(!near){
+      s+=`<polygon points="${x0+146},195 ${x0+250},195 ${x0+250},372 ${x0+200},372 ${x0+200},220 ${x0+146},220" fill="rgba(217,59,47,.32)"/>`;
+      s+=`<path d="M${x0+146} 195 H${x0+250} V296 M${x0+146} 220 H${x0+200} V372 H${x0+250} V344" fill="none" stroke="#E5483B" stroke-width="5" stroke-linejoin="round"/>`;
+      s+=R(x0+239,290,22,14,'#E5483B')+R(x0+239,330,22,14,'#E5483B')+`<rect x="${x0+234}" y="285" width="32" height="64" fill="none" stroke="#F2C94C" stroke-width="1.6"/><text x="${x0+274}" y="322" style="font:600 14px var(--f-key);fill:#F2C94C">C1</text>`;
+      s+=`<text x="${x0+20}" y="420" style="font:400 17px var(--f-body);fill:#FF8A80">More inductance, more noise on VDD</text>`;
+    }else{
+      s+=`<polygon points="${x0+146},191 ${x0+162},191 ${x0+162},224 ${x0+146},224" fill="rgba(47,158,92,.7)"/>`;
+      s+=`<path d="M${x0+146} 195 H${x0+160} M${x0+146} 220 H${x0+160}" fill="none" stroke="#E5483B" stroke-width="5"/>`;
+      s+=R(x0+158,189,22,12,'#E5483B')+R(x0+158,214,22,12,'#E5483B')+`<rect x="${x0+154}" y="184" width="30" height="47" fill="none" stroke="#F2C94C" stroke-width="1.6"/><text x="${x0+192}" y="212" style="font:600 14px var(--f-key);fill:#F2C94C">C1</text>`;
+      s+=`<text x="${x0+20}" y="420" style="font:400 17px var(--f-body);fill:#7EE2A8">Short path, clean supply</text>`;
+    }
+    return s;};
+  set('decSvg',`<rect x="0" y="0" width="700" height="460" rx="10" fill="#111920"/>`+G(1,half(10,false))+G(2,half(360,true)));
+})();
+
+/* dielectric trend */
+(function(){
+  let s=`<path class="ax" d="M60 20 V190 H590"/><text x="66" y="14">Capacitance</text><text x="590" y="214" text-anchor="end">DC voltage across the cap →</text>`;
+  s+=`<text x="64" y="214" style="font:400 14px var(--f-body);fill:#7D8A96">Illustration of the trend, not to scale</text>`;
+  s+=`<path class="cv" pathLength="1" d="M60 40 H556" stroke="#B26B00"/><path class="cv" pathLength="1" d="M60 40 C260 44 420 78 556 104" stroke="#1D5DBF" style="transition-delay:.2s"/><path class="cv" pathLength="1" d="M60 40 C220 50 360 124 556 158" stroke="#8B3FB5" style="transition-delay:.4s"/>`;
+  s+=`<text x="566" y="45" style="fill:#8A5300">C0G</text><text x="566" y="109" style="fill:#123D7E">X7R</text><text x="566" y="163" style="fill:#5B2180">X5R</text>`;
+  set('curveSvg',s);
+})();
+
+/* VDDA and VCAP */
+(function(){
+  let a='';const p=pill(10,50,'+3V3','p','l');a+=p.s+fbH(p.r,210,50,'FB1')+T(137,84,'600 Ω at 100 MHz','n','middle')+W('M210 50 H430');
+  const q=pill(430,50,'VDDA','p','l');a+=q.s+T(q.r+8,55,'pin 13','n');
+  a+=capV(280,50,150,'C7','1 µF')+capV(360,50,150,'C8','100 nF')+W('M280 150 H360 M320 150 V160')+gnd(320,162);
+  let b='';const r=pill(620,50,'VCAP','c','c');b+=r.s+W('M620 59 V70')+capV(620,70,160,'C9','4.7 µF')+gnd(620,162)+T(620,200,'pin 30 · ESR under 1 Ω','n','middle');
+  set('vddaSvg',G(1,a)+G(2,b));
+})();
+
+/* reset and boot */
+(function(){
+  let a='';const p=pill(10,50,'NRST','c','l');a+=p.s+W(`M${p.r} 50 H300`)+capV(150,50,150,'C10','100 nF')+gnd(150,152)+btnV(300,50,150,'SW1')+gnd(300,152)+T(10,200,'pin 7','n');
+  let b='';const q=pill(440,50,'BOOT0','c','l');b+=q.s+W(`M${q.r} 50 H600`)+resV(600,50,150,'R1','10 kΩ')+gnd(600,152)+T(440,200,'pin 60','n');
+  set('rstSvg',G(1,a)+G(2,b));
+})();
+
+/* Sheet_2 power path */
+(function(){
+  const bx=(x,y,w,h,t,sub)=>`<rect class="bx" x="${x}" y="${y}" width="${w}" height="${h}" rx="8"/>`+(t?`<text class="bt" x="${x+w/2}" y="${y+(sub?h/2-4:h/2+7)}" text-anchor="middle">${t}</text>`:'')+(sub?`<text class="bs" x="${x+w/2}" y="${y+h/2+20}" text-anchor="middle">${sub}</text>`:'');
+  const L=(cls,d)=>`<path class="ln ${cls}" d="${d}"/>`;
+  let s0=bx(20,30,180,390,'','')+`<text class="bt" x="110" y="64" text-anchor="middle">J1 USB-C</text>`;
+  [['VBUS',100],['D+',250],['D−',280],['CC1',355],['CC2',385]].forEach(r=>s0+=`<text class="bs" x="188" y="${r[1]+5}" text-anchor="end">${r[0]}</text>`);
+  s0+=bx(1180,30,210,390,'','')+`<text class="bt" x="1285" y="64" text-anchor="middle">U1</text><text class="bs" x="1285" y="86" text-anchor="middle">STM32F446RET6</text>`;
+  [['VDD ×5',100],['VDDA',180],['PA12 D+',250],['PA11 D−',280]].forEach(r=>s0+=`<text class="bs" x="1192" y="${r[1]+5}">${r[0]}</text>`);
+  let s1=L('pw','M200 100 H330')+L('pw','M550 100 H1180')+L('pw','M720 100 V180 H780')+L('pw','M950 180 H1180')+L('pw','M640 100 V36 H700');
+  s1+=bx(330,56,220,88,'U2 ME6211','C15 in, C16 out')+bx(780,158,170,44,'','')+`<text class="bs" x="865" y="186" text-anchor="middle">FB1 ferrite bead</text>`+bx(700,14,220,44,'','')+`<text class="bs" x="810" y="42" text-anchor="middle">R5 and D2, power LED</text>`;
+  s1+=pill(265,100,'VBUS','p','c').s+pill(1050,100,'+3V3','p','c').s+pill(1065,180,'VDDA','p','c').s;
+  let s2=L('dt','M200 250 H480 M200 280 H480 M680 250 H1180 M680 280 H1180')+bx(480,228,200,74,'U3 ESD','USBLC6-2SC6')+pill(930,250,'USB_DP','d','c').s+pill(930,280,'USB_DM','d','c').s;
+  let s3=L('cc','M200 355 H330 M200 385 H330 M550 370 H620 V380')+bx(330,334,220,72,'R2, R3','5.1 kΩ each')+gnd(620,382);
+  set('ppSvg',G(0,s0)+G(1,s1)+G(2,s2)+G(3,s3));
+})();
+
+/* USB-C CC handshake */
+(function(){
+  let s=box(10,40,230,370,'Charger (source)')+box(460,40,230,370,'Our board: J1');
+  s+=T(36,96,'5 V','n')+`<g class="k"><path d="M66 90 H180"/></g>`+resV(180,90,190,'Rp','pull-up')+W('M180 190 V200 H240');
+  s+=`<g class="k"><rect class="fill" x="36" y="316" width="150" height="48" rx="3"/></g>`+T(111,345,'VBUS switch','','middle');
+  s+=T(468,124,'CC2','n')+T(468,194,'CC1','n')+T(468,334,'VBUS','n');
+  s+=W('M460 200 H560')+resV(560,200,300,'R2','5.1 kΩ')+gnd(560,302)+W('M460 130 H620')+resV(620,130,230,'R3','5.1 kΩ')+gnd(620,232);
+  const g1=`<g class="only1"><path class="w" d="M240 200 H460" style="stroke:#8B3FB5;stroke-width:3.5"/><text x="350" y="224" text-anchor="middle" style="fill:#5B2180">CC wire in the cable</text></g>`+
+    `<path class="w" d="M186 340 H460" style="stroke:#2F9E5C;stroke-width:3.5"/><text x="323" y="330" text-anchor="middle" style="fill:#1E6E3F">VBUS 5 V on</text>`;
+  const g2=`<path class="w" d="M240 200 C330 200 380 130 460 130" style="stroke:#8B3FB5;stroke-width:3.5"/><text x="350" y="122" text-anchor="middle" style="fill:#5B2180">plug flipped</text>`;
+  set('ccSvg',G(0,s)+G(1,g1)+G(2,g2));
+})();
+
+/* ESD */
+(function(){
+  let s=box(10,70,120,240,'J1')+T(122,125,'D−','','end')+T(122,265,'D+','','end');
+  s+=box(270,80,150,220,'U3  USBLC6-2SC6');
+  [[1,120,'I/O1'],[2,190,'GND'],[3,260,'I/O2']].forEach(p=>{s+=`<g class="k"><path d="M250 ${p[1]} H270"/></g>`+T(260,p[1]-6,p[0],'n','middle')+T(278,p[1]+5,p[2]);});
+  [[6,120,'I/O1'],[5,190,'VBUS'],[4,260,'I/O2']].forEach(p=>{s+=`<g class="k"><path d="M420 ${p[1]} H440"/></g>`+T(430,p[1]-6,p[0],'n','middle')+T(412,p[1]+5,p[2],'','end');});
+  s+=W('M130 120 H250 M130 260 H250 M440 120 H560 M440 260 H560');
+  s+=pill(248,190,'GND','g','r').s+pill(442,190,'VBUS','p','l').s+pill(560,120,'USB_DM','d','l').s+pill(560,260,'USB_DP','d','l').s+T(560,150,'to PA11','n')+T(560,290,'to PA12','n');
+  const b=`<path d="M70 336 V350 H345 V336" fill="none" stroke="#F4B63F" stroke-width="3"/><text x="207" y="374" text-anchor="middle" style="fill:#8A5300">as close to J1 as you can</text>`;
+  set('esdSvg',G(0,s)+G(2,b));
+})();
+
+/* LDO pinout */
+(function(){
+  let s=box(300,30,180,170,'U2  ME6211C33M5G-N');
+  [[1,60,'VIN'],[2,115,'GND'],[3,170,'CE']].forEach(p=>{s+=`<g class="k"><path d="M280 ${p[1]} H300"/></g>`+T(290,p[1]-6,p[0],'n','middle')+T(308,p[1]+5,p[2]);});
+  [[5,60,'VOUT'],[4,170,'NC']].forEach(p=>{s+=`<g class="k"><path d="M480 ${p[1]} H500"/></g>`+T(490,p[1]-6,p[0],'n','middle')+T(472,p[1]+5,p[2],'','end');});
+  const v=pill(0,60,'VBUS','p','l');s+=v.s+W(`M${v.r} 60 H280 M210 60 V170 H280`)+`<circle cx="210" cy="60" r="4.5" fill="#1D5DBF"/>`+capV(110,60,140,'C15','10 µF')+gnd(110,142);
+  s+=pill(278,115,'GND','g','r').s+W('M500 60 H660')+capV(580,60,140,'C16','10 µF')+gnd(580,142)+pill(660,60,'+3V3','p','l').s;
+  s+=`<path d="M497 164 L509 176 M509 164 L497 176" stroke="#D93B2F" stroke-width="3" stroke-linecap="round"/>`;
+  set('ldoSvg',s);
+  const r=document.getElementById('iRange');if(!r)return;
+  const upd=()=>{const i=+r.value;document.getElementById('iOut').textContent=i+' mA';document.getElementById('pOut').textContent=(1.7*i/1000).toFixed(2)+' W';
+    const u=Math.round(i/5);document.getElementById('uOut').textContent=u+'%';const bar=document.getElementById('uBar');bar.style.width=u+'%';bar.style.background=u>80?'var(--err)':u>50?'var(--hl)':'var(--ok)';};
+  r.addEventListener('input',upd);r.addEventListener('change',()=>r.blur());r.addEventListener('pointerup',()=>r.blur());upd();
+})();
+
+/* LSE divider chain */
+(function(){
+  const el=document.getElementById('chain');if(!el)return;let s='';
+  for(let i=0;i<16;i++){const v=32768>>i;s+=`<span class="${i===15?'last':''}" style="animation-delay:${(i*0.07).toFixed(2)}s">${i===15?'1 Hz':v.toLocaleString('en-US').replace(/,/g,' ')}</span>`;}
+  el.innerHTML=s;
+})();
+
+/* Nucleo to J2 */
+(function(){
+  const NAMES=[['VDD_TARGET','+3V3','p'],['SWCLK','SWCLK','d'],['GND','GND','g'],['SWDIO','SWDIO','d'],['NRST','NRST','c'],['SWO','SWO','d']];
+  let s=`<rect class="brd" x="10" y="40" width="300" height="520" rx="10"/><text x="30" y="76">NUCLEO-F446RE</text><text class="sm" x="30" y="98">ST-LINK end, simplified</text>`;
+  s+=R(110,22,80,32,'#9AA6B1','rx="4"');
+  s+=`<text x="148" y="176">CN2</text>`;[0,1].forEach(r=>[0,1].forEach(c=>{s+=R(70+c*26-6,140+r*26-6,12,12,GOLD);}));
+  s+=`<rect class="jmp" x="58" y="128" width="50" height="24" rx="3"/><rect class="jmp" x="58" y="154" width="50" height="24" rx="3"/>`;
+  s+=`<g class="x"><path d="M40 124 L128 188 M128 124 L40 188" stroke="#D93B2F" stroke-width="3" stroke-linecap="round"/><text x="148" y="204" style="fill:#D93B2F">jumpers off</text></g>`;
+  s+=`<rect class="brd2" x="460" y="120" width="300" height="440" rx="10"/><text class="lt" x="480" y="156">Our F446 board</text>`;
+  let wires='';
+  NAMES.forEach((n,i)=>{const y=250+i*50;wires+=`<path class="wire" pathLength="1" d="M270 ${y} H500" stroke="${KIND[n[2]][0]}" style="transition-delay:${(i*0.12).toFixed(2)}s"/>`;});
+  let hd=R(256,226,28,298,'#2A2F35','rx="2"')+`<text x="270" y="216" text-anchor="middle">CN4</text>`+R(486,226,28,298,'#0B1014','rx="2" stroke="#33424F"')+`<text class="lt" x="500" y="216" text-anchor="middle">J2</text>`;
+  NAMES.forEach((n,i)=>{const y=250+i*50;hd+=R(264,y-6,12,12,GOLD)+R(494,y-6,12,12,GOLD)+`<text class="sm" x="244" y="${y+5}" text-anchor="end">${i+1}  ${n[0]}</text><text class="lt" x="526" y="${y+5}" style="font:600 15px var(--f-key)">${i+1}  ${n[1]}</text>`;});
+  s+=G(0,'')+`<g>${wires}</g>`+hd;
+  s+=R(600,546,90,28,'#9AA6B1','rx="8"')+`<text class="lt" x="645" y="534" text-anchor="middle">J1 USB-C</text>`;
+  const g3=`<path class="cab" d="M150 22 V-6"/><text class="sm" x="166" y="0">to the laptop</text><path class="cab" d="M645 574 V604"/><text class="sm" x="662" y="600">USB power</text>`;
+  set('nwSvg',s+G(3,g3));
+})();
+
+/* order waffle */
+(function(){
+  const el=document.getElementById('waf');if(!el)return;
+  const B=[['C14663','100 nF X7R'],['C19666','4.7 µF X5R'],['C1002','Ferrite bead'],['C15849','1 µF X5R'],['C25804','10 kΩ'],['C23186','5.1 kΩ'],['C19702','10 µF X5R'],['C21190','1 kΩ'],['C2286','Red LED'],['C115962','8 MHz crystal']];
+  const E=[['C69336','STM32F446RET6'],['C165948','USB-C'],['C7519','USBLC6 ESD'],['C82942','ME6211 LDO'],['C1656','27 pF C0G'],['C37208','1 × 6 header'],['C49257','1 × 3 header']];
+  const K=[['C318884','Tactile switch'],['C1985642','32.768 kHz crystal'],['C59526','4.3 pF C0G']];
+  const grp=(cls,title,list,cols)=>`<div class="${cls}"><h3><span>${list.length}</span>${title}</h3><div class="g ${cols===2?'g2':''}">${list.map(t=>`<div class="t"><b>${t[0]}</b><span>${t[1]}</span></div>`).join('')}</div></div>`;
+  el.innerHTML=grp('B','Basic',B,2)+grp('E','Extended',E,2)+grp('K','Check when you place',K,1);
+})();
+
+/* ================= navigation ================= */
+let cur=-1;
+function maxStep(s){const a=[...s.querySelectorAll('[data-step]')].map(e=>+e.dataset.step);return Math.max(+(s.dataset.steps||0),...a,0);}
+function setStep(s,n,anim){
+  if(REDUCE)anim=false;
+  if(!anim)s.classList.add('instant');
+  s.dataset.cur=n;s._step=n;
+  s.querySelectorAll('[data-step]').forEach(e=>e.classList.toggle('shown',+e.dataset.step<=n));
+  for(let i=1;i<=9;i++)s.classList.toggle('s'+i,i<=n);
+  if(!anim){void s.offsetWidth;requestAnimationFrame(()=>requestAnimationFrame(()=>s.classList.remove('instant')));}
+}
+function show(i,n,anim){
+  i=Math.max(0,Math.min(slides.length-1,i));
+  const s=slides[i];
+  if(i!==cur){
+    if(cur>=0){const o=slides[cur];o.classList.remove('active');setTimeout(()=>{if(!o.classList.contains('active'))setStep(o,0,false);},400);}
+    s.classList.add('active');cur=i;setStep(s,0,false);if(n>0)setStep(s,n,false);
+  }else setStep(s,n,anim);
+  history.replaceState(null,'','#'+(i+1)+(n?'.'+n:''));
+  const notes=s.querySelector('.notes');
+  document.querySelector('#notes h5').textContent=`Slide ${i+1} of ${slides.length}: ${s.dataset.title}`;
+  document.querySelector('#notes .body').textContent=notes?notes.textContent.trim():'';
+}
+function next(){const s=slides[cur];if(s._step<maxStep(s))show(cur,s._step+1,true);else if(cur<slides.length-1)show(cur+1,0,true);}
+function prev(){const s=slides[cur];if(s._step>0)show(cur,s._step-1,true);else if(cur>0)show(cur-1,maxStep(slides[cur-1]),false);}
+addEventListener('keydown',e=>{
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  const k=e.key;
+  if(['ArrowRight','ArrowDown','PageDown',' ','Enter'].includes(k)){e.preventDefault();next();}
+  else if(['ArrowLeft','ArrowUp','PageUp','Backspace'].includes(k)){e.preventDefault();prev();}
+  else if(k==='Home')show(0,0,true);
+  else if(k==='End')show(slides.length-1,0,true);
+  else if(k==='n'||k==='N')document.body.classList.toggle('show-notes');
+  else if(k==='f'||k==='F'){if(!document.fullscreenElement)document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();else document.exitFullscreen();}
+  else if(k==='?')document.body.classList.toggle('show-help');
+});
+document.getElementById('next').onclick=e=>{e.stopPropagation();next();};
+document.getElementById('prev').onclick=e=>{e.stopPropagation();prev();};
+document.getElementById('helpbtn').onclick=e=>{e.stopPropagation();document.body.classList.toggle('show-help');};
+deck.addEventListener('click',e=>{if(e.target.closest('a,button,input,label,.calc'))return;const r=deck.getBoundingClientRect();if(e.clientX<r.left+r.width*0.25)prev();else next();});
+let idle;addEventListener('mousemove',()=>{document.body.classList.add('pointer');clearTimeout(idle);idle=setTimeout(()=>document.body.classList.remove('pointer'),2500);});
+let tx=null;
+addEventListener('touchstart',e=>{tx=e.touches[0].clientX;},{passive:true});
+addEventListener('touchend',e=>{if(tx===null)return;const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50){dx<0?next():prev();}tx=null;});
+function fromHash(){const m=location.hash.match(/^#(\d+)(?:\.(\d+))?/);if(m)return[+m[1]-1,+(m[2]||0)];return[0,0];}
+const [hi,hn]=fromHash();show(hi,hn,false);
+addEventListener('hashchange',()=>{const [i,n]=fromHash();if(i!==cur||n!==slides[cur]._step)show(i,n,false);});
+})();
+</script>
+</body>
+</html>

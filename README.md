@@ -11,6 +11,13 @@ Open **`f446-build.html`**. It's the main event deck, 25 slides in four parts:
 3. **Build the F446 core** (11–21): seven blocks wired pin by pin on the actual U1 symbol from our schematic. Each block's pins light up with their net labels, and the parts to add are drawn alongside.
 4. **Start working** (22–25): task cards to hand out, splitting the work across sheets, common questions and links.
 
+Then open **`f446-components.html`**, part 2 (26 slides), for Thursday. It goes through every part on the board:
+
+1. **Read a part** (slides 3–5): each column of the parts list, how a part number decodes, and finding a part in EasyEDA by its LCSC number.
+2. **Sheet by sheet** (6–20): U1, decoupling, capacitor types, VDDA and VCAP, reset and boot, the USB-C power path, the CC resistors, ESD, the 3.3 V regulator (with a live heat calculator), LED resistors, both crystals, programming with the Nucleo, and Sheet_4.
+3. **Check it** (21–23): the order by Basic and Extended, how to verify each sheet, and mistakes to look for.
+4. **Thursday and next** (24–26): testing on the Nucleo, the plan to the final, and links.
+
 Print **`F446-Build-Sheet.pdf`**, one per person. Page 1 lists every core pin and what it connects to, with checkboxes. Page 2 is the EasyEDA Standard shortcut list.
 
 Print **`F446-Parts-List.pdf`** too. It's three pages:
@@ -26,6 +33,7 @@ The deck and the build sheet are written for **EasyEDA Standard** (easyeda.com/e
 ## All the talks
 
 1. **Build an STM32F446 board, from the basics up** (`f446-build.html`). EasyEDA Standard. The event deck above.
+   Part 2, **every part on the F446 board** (`f446-components.html`), follows it.
 2. **Designing a PCB in EasyEDA Pro** (`index.html`). Students build one small board start to finish in [pro.easyeda.com/editor](https://pro.easyeda.com/editor): a push button that lights an LED. Comes with a two-page Pro shortcut sheet.
 3. **Picking parts for a custom STM32 board** (`mcu-parts.html`). The deeper talk on going from requirements to a parts list and choosing the crystal, with a live crystal calculator. Comes with a three-page fill-in worksheet.
 
@@ -34,6 +42,7 @@ The deck and the build sheet are written for **EasyEDA Standard** (easyeda.com/e
 | File | What it is |
 |---|---|
 | `f446-build.html` | **Event deck:** EasyEDA Standard basics, then the F446 core wired pin by pin, 25 slides |
+| `f446-components.html` | **Part 2 deck:** every component, why we chose it, and how to find it in EasyEDA, 26 slides |
 | `f446-build-sheet.html` | Event handout: the build sheet as a web page, with a Print button |
 | `F446-Build-Sheet.pdf` | The same build sheet as a 2-page letter-size PDF |
 | `f446-parts-list.html` | Parts list by EasyEDA sheet with LCSC numbers, the order list and the Nucleo plan, as a web page |
@@ -118,7 +127,7 @@ Many slides animate in steps (wires drawing, parts moving into place, tracks rou
 3. Choose the **main** branch and the **/ (root)** folder, then click **Save**.
 4. After a minute or two, the page shows your site address. It looks like `https://YOUR-USERNAME.github.io/easyeda-lesson/`.
 
-Share that link with students. The site address opens the EasyEDA Pro lesson (`index.html`). Every other file is at the same address followed by its name. For the event, share `.../f446-build.html`, `.../F446-Build-Sheet.pdf` and `.../F446-Parts-List.pdf`.
+Share that link with students. The site address opens the EasyEDA Pro lesson (`index.html`). Every other file is at the same address followed by its name. For the event, share `.../f446-build.html`, `.../f446-components.html`, `.../F446-Build-Sheet.pdf` and `.../F446-Parts-List.pdf`.
 
 ## Printing the shortcut sheet
 
